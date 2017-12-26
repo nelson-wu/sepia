@@ -5,11 +5,14 @@
 
 import java.net.InetSocketAddress
 
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.io.Tcp.Write
 import akka.io.{IO, Tcp}
 import akka.util.ByteString
 
-val servername = "localhost"
+object Globals {
+  val servername = "localhost"
+}
 
 object Main extends App{
   val system = ActorSystem.create("server-main")
@@ -38,9 +41,9 @@ class Server extends Actor {
 
 }
 
-class UsersActor extends Actor{
+class Users(connection: ActorRef) extends Actor{
   private val users = collection.mutable.Seq[String]()
-  val writer = context.actorOf(Props[Writer])
+  val writer = context.actorOf(Props(classOf[Writer], connection))
   def receive = {
     case Nick(nick) ⇒
       if (users.contains(nick)) writer ! ERR_NICKNAMEINUSE(nick)
@@ -51,31 +54,45 @@ class UsersActor extends Actor{
   }
 }
 
-class Writer extends Actor{
-  import Tcp._
+class Writer(connection: ActorRef) extends Actor{
   def receive = {
-    case n: Numerical ⇒ sender ! Write(n.toMessage)
+    case n: Numerical ⇒ {
+      println("Sending: " + n.toMessage.utf8String)
+      connection ! Write(n.toMessage)
+    }
   }
 }
 
 sealed trait Action
 case class Nick(nick: String) extends Action
+case object NoAction extends Action
 
 object Action{
   def apply(input: String): Action = {
     val tokens = input.split(" ")
+    //tokens foreach (println _)
     tokens(0) match {
       case "NICK" ⇒ Nick(tokens(1))
+      case _ ⇒ NoAction
     }
   }
 }
 
 class SimplisticHandler extends Actor {
   import Tcp._
+  val usersActor = context.actorOf(Props(classOf[Users], sender))
+  context.watch(usersActor)
   def receive = {
-    case Received(data) ⇒
-      println(data)
-      sender ! Write(data)
+    case Received(data) ⇒ {
+      data.utf8String.split("\r\n").foreach { line ⇒
+        val action = Action(line)
+        println("Received: " + line + " " + action)
+        action match {
+          case a: Nick ⇒ usersActor ! a
+          case NoAction ⇒ Unit
+        }
+      }
+    }
     case PeerClosed     ⇒ context stop self
   }
 }
@@ -87,7 +104,7 @@ sealed trait Response {
 sealed trait Numerical extends Response {
   val err: String
   def toMessage: ByteString = {
-    ByteString(s":$servername ${err} ${user} ${message}")
+    ByteString(s":${Globals.servername} ${err} ${user} :${message.replace(" ", "%20")}\r\n")
   }
 }
 
@@ -96,4 +113,5 @@ case class ERR_NICKNAMEINUSE(user: String) extends Numerical{
 }
 case class RPL_WELCOME(user: String) extends Numerical{
   val err = "001"
+  override val message = "Welcome to the network!"
 }
