@@ -6,7 +6,7 @@ trait CanParse[-A <: Command] {
 
 // low priority implicit typeclasses
 object CanParse {
-  implicit val CanParseOnlyTarget: CanParse[Command] = {
+  implicit val CanParseOnlyTarget: CanParse[Command] = new CanParse[Command]{
     def parse(tokens: Seq[String]): Params = {
       Target(tokens(0))
     }

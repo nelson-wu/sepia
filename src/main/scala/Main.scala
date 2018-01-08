@@ -88,17 +88,17 @@ object Main extends App{
 //  }
 //}
 
-class Writer(connection: ActorRef) extends Actor {
-
-  def send(n: Response) = {
-    println("Sending: " + n.toMessage.utf8String)
-    connection ! Write(n.toMessage)
-  }
-
-  def receive = {
-    case n: Response ⇒ send(n)
-  }
-}
+//class Writer(connection: ActorRef) extends Actor {
+//
+//  def send(n: Response) = {
+//    println("Sending: " + n.toMessage.utf8String)
+//    connection ! Write(n.toMessage)
+//  }
+//
+//  def receive = {
+//    case n: Response ⇒ send(n)
+//  }
+//}
 
 //sealed trait Action
 //sealed trait UserAction extends Action{
@@ -109,18 +109,18 @@ class Writer(connection: ActorRef) extends Actor {
 //case class Privmsg(nick: String, channel: String, message: String) extends UserAction
 //case object NoAction extends Action
 
-object Action{
-  def apply(input: String)(implicit user: String = ""): Action = {
-    val tokens = input.split(" ")
-    //tokens foreach (println _)
-    tokens(0) match {
-      case "NICK" ⇒ Nick(tokens(1))
-      case "JOIN" ⇒ Join(user, tokens(1))
-      case "PRIVMSG" ⇒ Privmsg(user, tokens(1), tokens.drop(2).mkString(" ").drop(1))
-      case _ ⇒ NoAction
-    }
-  }
-}
+//object Action{
+//  def apply(input: String)(implicit user: String = ""): Action = {
+//    val tokens = input.split(" ")
+//    //tokens foreach (println _)
+//    tokens(0) match {
+//      case "NICK" ⇒ Nick(tokens(1))
+//      case "JOIN" ⇒ Join(user, tokens(1))
+//      case "PRIVMSG" ⇒ Privmsg(user, tokens(1), tokens.drop(2).mkString(" ").drop(1))
+//      case _ ⇒ NoAction
+//    }
+//  }
+//}
 
 //class Handler(connection: ActorRef) extends Actor {
 //  import Tcp._
@@ -172,36 +172,36 @@ sealed trait Numerical extends Response {
 //  }
 //}
 
-case class ERR_NICKNAMEINUSE(user: String) extends Numerical{
-  val err = "433"
-}
+//case class ERR_NICKNAMEINUSE(user: String) extends Numerical{
+//  val err = "433"
+//}
 
 //case class RPL_WELCOME(user: String) extends Numerical{
 //  val err = "001"
 //  override val message = "Welcome to the network!"
 //}
 
-case class JoinResponse(user: String, override val channel: String) extends Command {
-  val command = "JOIN"
-  override val message = channel
-}
+//case class JoinResponse(user: String, override val channel: String) extends Command {
+//  val command = "JOIN"
+//  override val message = channel
+//}
 
-case class RPL_NAMREPLY(user: String, _channel: String, userList: Seq[String]) extends Numerical {
-  val err = "353"
-  override val channel = "= " + _channel
-  override val message = s"${userList.mkString(" ")}"
-}
+//case class RPL_NAMREPLY(user: String, _channel: String, userList: Seq[String]) extends Numerical {
+//  val err = "353"
+//  override val channel = "= " + _channel
+//  override val message = s"${userList.mkString(" ")}"
+//}
+//
+//case class RPL_ENDOFNAMES(user: String, override val channel: String) extends Numerical {
+//  val err = "366"
+//  override val message = "End of /NAMES list"
+//}
+//
+//case class RPL_TOPIC(user: String, override val channel: String, topic: String) extends Numerical {
+//  val err = "332"
+//  override val message = topic
+//}
 
-case class RPL_ENDOFNAMES(user: String, override val channel: String) extends Numerical {
-  val err = "366"
-  override val message = "End of /NAMES list"
-}
-
-case class RPL_TOPIC(user: String, override val channel: String, topic: String) extends Numerical {
-  val err = "332"
-  override val message = topic
-}
-
-case class MessageResponse(user: String, override val channel: String, override val message: String) extends Command {
-  val command = "PRIVMSG"
-}
+//case class MessageResponse(user: String, override val channel: String, override val message: String) extends Command {
+//  val command = "PRIVMSG"
+//}

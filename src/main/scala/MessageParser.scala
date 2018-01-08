@@ -15,8 +15,7 @@ object MessageParser{
     Message(command, prefix, params)
   }
 
-  @implicitNotFound("Could not find CanParse for type")
-  def getParamsForCommand[A <: Command : CanParse](tokens: Seq[String]): Option[Params] = {
-    Try(implicitly[CanParse[A]].parse(tokens)).toOption
+  def getParamsForCommand[A <: Command : CanParse](tokens: Seq[String]): Params = {
+    Try(implicitly[CanParse[A]].parse(tokens)).getOrElse(NoParams)
   }
 }

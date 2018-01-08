@@ -20,7 +20,7 @@ class Dispatcher(connection: ActorRef) extends Actor {
         message.command match {
           case NickCommand ⇒ usersActor ! message
           case JoinCommand ⇒ channelsActor ! message
-          case m: Privmsg ⇒ channelsActor ! m
+          //case m: Privmsg ⇒ channelsActor ! m
           case NoCommand ⇒ Unit
         }
 
