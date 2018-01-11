@@ -1,9 +1,9 @@
 package ircserver
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.Tcp
 import akka.io.Tcp.{PeerClosed, Received, Register}
 
-class Dispatcher(connection: ActorRef) extends Actor {
+class Dispatcher(connection: ActorRef) extends Actor with ActorLogging{
   import Tcp._
   val writerActor = context.actorOf(Props(classOf[Writer], connection))
   val usersActor = context.actorOf(Props(classOf[Users], writerActor))
@@ -15,17 +15,19 @@ class Dispatcher(connection: ActorRef) extends Actor {
     case Received(data) ⇒ {
       data.utf8String.split("\r\n").foreach { line ⇒
         val message = Message(line)
-        println("Received: " + line + " " + Message)
+        log.debug("Recieved: " + line)
+        println("Received: " + line + "\nParsed: " + message)
         updateCurrentNick(message)
         message.command match {
           case NickCommand ⇒ usersActor ! message
-          case JoinCommand ⇒ channelsActor ! message
+          case JoinCommand | PrivmsgCommand ⇒ channelsActor ! message
           //case m: Privmsg ⇒ channelsActor ! m
           case NoCommand ⇒ Unit
         }
 
-        def updateCurrentNick(message: ircserver.Message): Unit = message match {
-          case Message(NickCommand, Prefix(nick), _, _) ⇒ userNick = nick
+        def updateCurrentNick(message: ircserver.Message[_]): Unit = message match {
+          case Message(NickCommand, _, Target(nick), _) ⇒ userNick = nick
+          case _ ⇒ Unit
         }
       }
     }

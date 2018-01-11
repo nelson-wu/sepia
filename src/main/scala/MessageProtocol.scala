@@ -1,12 +1,14 @@
 package ircserver
 
+import scala.reflect.ClassTag
+
 // From https://tools.ietf.org/html/rfc2812#page-5
 
 trait BaseMessage
-case class Message(command: Command, prefix: Prefix, params: Params = NoParams, recipient: Option[String] = None) extends BaseMessage
+case class Message[+P <: Params](command: Command, prefix: Prefix, params: P = NoParams, recipient: Option[String] = None) extends BaseMessage
 
 object Message {
-  def apply(str: String)(implicit source: String): Message = MessageParser.parse(str)(source)
+  def apply(str: String)(implicit source: String): Message[Params] = MessageParser.parse(str)(source)
 }
 
 case class Prefix(name: String)
@@ -18,16 +20,19 @@ case class Special(text: String) extends Params
 case class Compound(targets: Seq[Target], special: Special) extends Params
 case object NoParams extends Params
 
+
 trait Command { def text: String }
 case class ReplyCommand(text: String) extends Command
 case object NickCommand extends Command { val text = "NICK" }
 case object NoCommand extends Command { val text = "" }
+case object PrivmsgCommand extends Command { val text = "PRIVMSG" }
 case object JoinCommand extends Command { val text = "JOIN" }
 
 object Command {
   def apply(str: String): Command = str match {
     case "NICK" ⇒ NickCommand
     case "JOIN" ⇒ JoinCommand
+    case "PRIVMSG" ⇒ PrivmsgCommand
     case _ ⇒ NoCommand
   }
 }

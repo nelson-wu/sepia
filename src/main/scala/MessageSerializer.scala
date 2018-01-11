@@ -6,14 +6,14 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 object MessageSerializer {
-  import CanSerializeImplicits._
   val CRLF = "\r\n"
-  def serialize(messages: Message*): ByteString = {
+  def serialize[P <: Params : CanSerialize](messages: Message[P]*): ByteString = {
     messages.foldLeft(ByteString()) { (acc, message) ⇒
       val prefix = ":" + message.prefix.name
       val command = message.command.text
-      val params = serializeParams(message.params)
-      acc ++ ByteString(s"$prefix $command $params" + CRLF)
+      val params = serializeParams[P](message.params).getOrElse("")
+      val writeString = s"$prefix $command $params"
+      acc ++ ByteString(writeString + CRLF)
     }
   }
 
