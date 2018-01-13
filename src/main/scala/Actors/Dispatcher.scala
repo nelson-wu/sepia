@@ -20,7 +20,7 @@ class Dispatcher(connection: ActorRef) extends Actor with ActorLogging{
         updateCurrentNick(message)
         message.command match {
           case NickCommand ⇒ usersActor ! message
-          case JoinCommand | PrivmsgCommand ⇒ channelsActor ! message
+          case JoinCommand | PartCommand | PrivmsgCommand ⇒ channelsActor ! message
           //case m: Privmsg ⇒ channelsActor ! m
           case NoCommand ⇒ Unit
         }

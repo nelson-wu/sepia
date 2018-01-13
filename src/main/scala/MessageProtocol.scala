@@ -27,12 +27,14 @@ case object NickCommand extends Command { val text = "NICK" }
 case object NoCommand extends Command { val text = "" }
 case object PrivmsgCommand extends Command { val text = "PRIVMSG" }
 case object JoinCommand extends Command { val text = "JOIN" }
+case object PartCommand extends Command { val text = "PART" }
 
 object Command {
   def apply(str: String): Command = str match {
     case "NICK" ⇒ NickCommand
     case "JOIN" ⇒ JoinCommand
     case "PRIVMSG" ⇒ PrivmsgCommand
+    case "PART" ⇒ PartCommand
     case _ ⇒ NoCommand
   }
 }

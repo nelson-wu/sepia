@@ -2,7 +2,6 @@ package ircserver
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import MessageFactory._
-import shapeless.{HList, HNil}
 
 import scala.collection.mutable
 
@@ -11,9 +10,9 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
   val channels = collection.mutable.Map[String, Channel]()
   def receive = {
     case Message(JoinCommand, Prefix(user), Target(channel), _) if !isUserInChannel(user, channel) ⇒ {
-      println(channels(channel))
+      //println(channels(channel))
       channels(channel).users += user
-      println(channels(channel).users)
+      //println(channels(channel).users)
       val macroResponse = (
         JOIN(user, channel),
         RPL_TOPIC(user, channel, channels(channel).topic),
@@ -21,6 +20,13 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
         RPL_ENDOFNAMES(user, channel)
       )
       writer ! macroResponse
+    }
+    case Message(PrivmsgCommand, Prefix(user), Compound(list, message), _) ⇒ {
+      val channel = list.head.target
+      channels(channel).log += message.text
+    }
+    case Message(PartCommand, Prefix(user), Target(channel), _) if isUserInChannel(user, channel)⇒ {
+      channels(channel).users -= user
     }
 
     //    case Privmsg(user, channel, message) ⇒ {

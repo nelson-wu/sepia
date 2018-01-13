@@ -7,7 +7,7 @@ object MessageParser{
 
   def parse(str: String)(implicit defaultSource: String): Message[Params] = {
     import CanParseImplicits._
-    val tokens = str.split("\\s+")
+    val tokens = str.split(" ")
     //println("source: " + defaultSource)
     //println("tokens(0): " + tokens(0))
     val (prefix, command, remainingTokens) = tokens(0).contains(":") match {
