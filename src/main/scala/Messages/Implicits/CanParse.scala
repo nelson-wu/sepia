@@ -1,4 +1,6 @@
-package ircserver
+package Messages.Implicits
+
+import Messages.{Command, Params, Target}
 
 trait CanParse[-A <: Command] {
   def parse(tokens: Seq[String]): Params

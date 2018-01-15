@@ -1,8 +1,8 @@
-package ircserver
+package Messages
 
+import Messages.Implicits.CanSerialize
 import akka.util.ByteString
 
-import scala.reflect.ClassTag
 import scala.util.Try
 
 object MessageSerializer {

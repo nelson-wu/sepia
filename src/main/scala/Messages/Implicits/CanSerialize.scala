@@ -1,4 +1,6 @@
-package ircserver
+package Messages.Implicits
+
+import Messages._
 
 trait CanSerialize[-B <: Params] {
   def serialize(params: B): String

@@ -1,15 +1,9 @@
-package ircserver
-
-import scala.reflect.ClassTag
+package Messages
 
 // From https://tools.ietf.org/html/rfc2812#page-5
 
 trait BaseMessage
-case class Message[+P <: Params](command: Command, prefix: Prefix, params: P = NoParams, recipient: Option[String] = None) extends BaseMessage
-
-object Message {
-  def apply(str: String)(implicit source: String): Message[Params] = MessageParser.parse(str)(source)
-}
+case class Message[+P <: Params](command: Command, prefix: Prefix, params: P = NoParams, recipient: String) extends BaseMessage
 
 case class Prefix(name: String)
 

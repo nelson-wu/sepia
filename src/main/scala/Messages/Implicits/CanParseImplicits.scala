@@ -1,4 +1,6 @@
-package ircserver
+package Messages.Implicits
+
+import Messages._
 
 /**
   * Created by Nelson on 2018/01/10.

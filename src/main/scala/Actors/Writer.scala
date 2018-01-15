@@ -1,42 +1,46 @@
-package ircserver
+package Actors
 
+import Messages._
 import akka.actor.{Actor, ActorRef}
 import akka.io.Tcp.Write
 import shapeless.TypeCase
 
 import scala.collection.mutable
 
-class Writer(connection: ActorRef) extends Actor {
-  import MessageSerializer._
+class Writer extends Actor {
+  import Messages.MessageSerializer._
 
-  var connectionList = mutable.Map[String, ActorRef]()
+  var connectionList = mutable.Map[String, Connection]()
 
   val messageTarget = TypeCase[Message[Target]]
   val messageSpecial = TypeCase[Message[Special]]
   val messageCompound = TypeCase[Message[Compound]]
 
   def receive = {
-    case messageTarget(n) ⇒
-      connection ! Write(serialize(n))
+    case messageTarget(n) if connectionList.contains(n.recipient) ⇒
+      connectionList(n.recipient).ref ! Write(serialize(n))
       println(s"Sending: ${serialize(n).utf8String}")
-    case messageSpecial(n) ⇒
-      connection ! Write(serialize(n))
+    case messageSpecial(n) if connectionList.contains(n.recipient) ⇒
+      connectionList(n.recipient).ref ! Write(serialize(n))
       println(s"Sending: ${serialize(n).utf8String}")
-    case messageCompound(n) ⇒
-      connection ! Write(serialize(n))
+    case messageCompound(n) if connectionList.contains(n.recipient) ⇒
+      connectionList(n.recipient).ref ! Write(serialize(n))
       println(s"Sending: ${serialize(n).utf8String}")
+    case (s: String, c: Connection) ⇒
+      connectionList += (s → c)
+      sender ! "ACK"
     case p : Product ⇒ p.productIterator.foreach( e ⇒ parseMessage(e.asInstanceOf[Message[Params]]))
   }
 
   def parseMessage(m: Message[_]): Unit = m match {
-    case messageTarget(n) ⇒
-      connection ! Write(serialize(n))
+    case messageTarget(n) if connectionList.contains(n.recipient)⇒
+      connectionList(n.recipient).ref ! Write(serialize(n))
       println(s"Sending: ${serialize(n).utf8String}")
-    case messageSpecial(n) ⇒
-      connection ! Write(serialize(n))
+    case messageSpecial(n) if connectionList.contains(n.recipient)⇒
+      connectionList(n.recipient).ref ! Write(serialize(n))
       println(s"Sending: ${serialize(n).utf8String}")
-    case messageCompound(n) ⇒
-      connection ! Write(serialize(n))
+    case messageCompound(n) if connectionList.contains(n.recipient)⇒
+      connectionList(n.recipient).ref ! Write(serialize(n))
       println(s"Sending: ${serialize(n).utf8String}")
   }
 }

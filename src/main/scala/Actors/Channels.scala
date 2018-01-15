@@ -1,7 +1,7 @@
-package ircserver
+package Actors
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import MessageFactory._
+import Messages._
 
 import scala.collection.mutable
 
@@ -9,7 +9,9 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
   case class Channel (topic: String, users: mutable.Buffer[String] = mutable.Buffer(), log: mutable.Buffer[String] = mutable.Buffer())
   val channels = collection.mutable.Map[String, Channel]()
   def receive = {
-    case Message(JoinCommand, Prefix(user), Target(channel), _) if !isUserInChannel(user, channel) ⇒ {
+    case Message(JoinCommand, Prefix(user), Target(channel), recipient) if !isUserInChannel(user, channel) ⇒ {
+      val factory = new MessageFactory(user)
+      import factory._
       //println(channels(channel))
       channels(channel).users += user
       //println(channels(channel).users)

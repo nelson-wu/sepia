@@ -2,9 +2,9 @@ package Actors
 
 import java.net.InetSocketAddress
 
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.io.{IO, Tcp}
-import ircserver.{Globals, Dispatcher}
+import ircserver.Globals
 
 class Server extends Actor {
 
@@ -21,9 +21,11 @@ class Server extends Actor {
     case CommandFailed(_: Bind) ⇒ context stop self
 
     case c @ Connected(remote, local) ⇒ {
-      val connection = sender()
-      context.actorOf(Props(classOf[Dispatcher], connection))
+      val connection = new Connection(sender())
+      context.actorOf(Props(classOf[Dispatcher], connection.ref))
     }
   }
 
 }
+
+class Connection(val ref: ActorRef) extends AnyVal

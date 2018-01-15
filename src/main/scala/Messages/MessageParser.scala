@@ -1,12 +1,13 @@
-package ircserver
+package Messages
 
-import scala.annotation.implicitNotFound
-import scala.util.{Failure, Success, Try}
+import Messages.Implicits.CanParse
+import ircserver._
+
+import scala.util.Try
 
 object MessageParser{
 
   def parse(str: String)(implicit defaultSource: String): Message[Params] = {
-    import CanParseImplicits._
     val tokens = str.split(" ")
     //println("source: " + defaultSource)
     //println("tokens(0): " + tokens(0))
@@ -15,7 +16,7 @@ object MessageParser{
       case false ⇒ (Prefix(defaultSource), Command(tokens(0)), tokens.drop(1))
     }
     val params = getParamsForCommand[command.type](remainingTokens)
-    Message(command, prefix, params)
+    Message(command, prefix, params, "localhost")
   }
 
   def getParamsForCommand[A <: Command : CanParse](tokens: Seq[String]): Params = {
