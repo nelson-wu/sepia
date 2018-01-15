@@ -4,8 +4,12 @@ import akka.actor.{Actor, ActorRef}
 import akka.io.Tcp.Write
 import shapeless.TypeCase
 
+import scala.collection.mutable
+
 class Writer(connection: ActorRef) extends Actor {
   import MessageSerializer._
+
+  var connectionList = mutable.Map[String, ActorRef]()
 
   val messageTarget = TypeCase[Message[Target]]
   val messageSpecial = TypeCase[Message[Special]]
