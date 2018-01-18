@@ -43,5 +43,13 @@ class MessageFactory(recipient: String) {
     )
     Message(ReplyCommand("332"), Prefix(serverName), params, recipient)
   }
+
+  def PRIVMSG(user: String, channel: String, text: String): Message[Compound] = {
+    val params = Compound(
+      Seq(Target(channel)),
+      Special(text)
+    )
+    Message(PrivmsgCommand, Prefix(user), params, recipient)
+  }
 }
 

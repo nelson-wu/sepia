@@ -14,6 +14,10 @@ class Server extends Actor {
   IO(Tcp) ! Bind(self, new InetSocketAddress("localhost", Globals.port))
   println("Listening on " + Globals.port)
 
+  val writerActor = context.actorOf(Props(classOf[Writer]))
+  val usersActor = context.actorOf(Props(classOf[Users], writerActor))
+  val channelsActor = context.actorOf(Props(classOf[Channels], writerActor))
+
   def receive = {
     case b @ Bound(localAddress) ⇒
       context.parent ! b
@@ -22,7 +26,8 @@ class Server extends Actor {
 
     case c @ Connected(remote, local) ⇒ {
       val connection = new Connection(sender())
-      context.actorOf(Props(classOf[Dispatcher], connection.ref))
+
+      context.actorOf(Props(classOf[Dispatcher], connection.ref, channelsActor, usersActor, writerActor))
     }
   }
 

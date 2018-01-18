@@ -1,13 +1,13 @@
 package Messages
 
 import Messages.Implicits.CanParse
-import ircserver._
 
 import scala.util.Try
 
 object MessageParser{
 
   def parse(str: String)(implicit defaultSource: String): Message[Params] = {
+    import Implicits.CanParseImplicits._
     val tokens = str.split(" ")
     //println("source: " + defaultSource)
     //println("tokens(0): " + tokens(0))
@@ -15,11 +15,21 @@ object MessageParser{
       case true ⇒ (Prefix(tokens(0)), Command(tokens(1)), tokens.drop(2))
       case false ⇒ (Prefix(defaultSource), Command(tokens(0)), tokens.drop(1))
     }
-    val params = getParamsForCommand[command.type](remainingTokens)
+    //println("tokens: ")
+    //remainingTokens foreach (println _)
+    val canParse = command.text match {
+      case "NICK" ⇒ implicitly[CanParse[NickCommand.type]]
+      case "JOIN" ⇒ implicitly[CanParse[JoinCommand.type]]
+      case "PRIVMSG" ⇒ implicitly[CanParse[PrivmsgCommand.type]]
+      case "PART" ⇒ implicitly[CanParse[PartCommand.type]]
+      case _ ⇒ implicitly[CanParse[NoCommand.type]]
+    }
+    val params = getParamsForCommand(remainingTokens)(canParse)
     Message(command, prefix, params, "localhost")
   }
 
-  def getParamsForCommand[A <: Command : CanParse](tokens: Seq[String]): Params = {
-    Try(implicitly[CanParse[A]].parse(tokens)).getOrElse(NoParams)
+  def getParamsForCommand[A <: Command](tokens: Seq[String])(implicit ev: CanParse[A]): Params = {
+    Try(ev.parse(tokens)).getOrElse(NoParams)
   }
+
 }

@@ -7,13 +7,13 @@ import Messages._
   */
 object CanParseImplicits {
   implicit object CanParseJoin extends CanParse[JoinCommand.type] {
-    def parse(tokens: Seq[String]): Params = Target(tokens(1).drop(1))
+    def parse(tokens: Seq[String]): Params = Target(tokens.head)
   }
   implicit object CanParsePrivmsg extends CanParse[PrivmsgCommand.type] {
     def parse(tokens: Seq[String]): Params = {
-      val text = tokens.drop(2).mkString(" ")
+      val text = tokens.drop(1).mkString(" ")
       val stripColon = text.drop(1)
-      val destination = tokens(1)
+      val destination = tokens.head
 
       Compound(
         Seq(Target(destination)),
