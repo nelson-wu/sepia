@@ -8,6 +8,7 @@ cancelable in Global := true
 resolvers += "akka" at "http://repo.akka.io/snapshots"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor" % "2.5.3",
+  "com.typesafe.akka" %% "akka-actor" % "2.5.9",
+  "com.typesafe.akka" %% "akka-http" % "10.0.11",
   "com.chuusai" %% "shapeless" % "2.3.3"
 )
