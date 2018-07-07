@@ -17,6 +17,7 @@ class Server extends Actor {
   val writerActor = context.actorOf(Props(classOf[Writer]))
   val usersActor = context.actorOf(Props(classOf[Users], writerActor))
   val channelsActor = context.actorOf(Props(classOf[Channels], writerActor))
+  val fbMessengerActor = context.actorOf(Props(classOf[FbMessenger], usersActor, channelsActor))
 
   def receive = {
     case b @ Bound(localAddress) ⇒

@@ -12,8 +12,10 @@ import akka.io.{IO, Tcp}
 import akka.util.ByteString
 
 object Globals {
-  val servername = "localhost"
+  val serverName = "localhost"
   val port = 35353
+  val fbServerName = "localhost"
+  val fbPort = 39393
 }
 
 object Main extends App{

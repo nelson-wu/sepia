@@ -26,7 +26,7 @@ object MessageParser{
       case _ ⇒ implicitly[CanParse[NoCommand.type]]
     }
     val params = getParamsForCommand(remainingTokens)(canParse)
-    Message(command, prefix, params, Globals.servername)
+    Message(command, prefix, params, Globals.serverName)
   }
 
   def getParamsForCommand[A <: Command](tokens: Seq[String])(implicit ev: CanParse[A]): Params = {

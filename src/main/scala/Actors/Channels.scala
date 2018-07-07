@@ -1,21 +1,24 @@
 package Actors
 
+import Messages.Implicits.ImplicitConversions.{ChannelName, ThreadId, UserName}
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import Messages._
 
 import scala.collection.mutable
 
 class Channels(writer: ActorRef) extends Actor with ActorLogging {
-  case class Channel (topic: String, users: mutable.Buffer[String] = mutable.Buffer(), log: mutable.Buffer[String] = mutable.Buffer())
+  case class Channel (topic: String, users: mutable.Buffer[UserName] = mutable.Buffer(), log: mutable.Buffer[String] = mutable.Buffer())
   private val channels = collection.mutable.Map[String, Channel]()
+  private val channelIdMap = collection.mutable.Map[ThreadId, String]()
+
   def receive = {
-    case Message(JoinCommand, Prefix(user), Target(channel), recipient) if !isUserInChannel(user, channel) ⇒ {
+    case Message(JoinCommand, Prefix(user), Target(channel), _) if !isUserInChannel(user, channel) ⇒ {
       val factory = new MessageFactory(user)
       import factory._
       channels(channel).users += user
 
       val joinMessages = channels(channel).users.map { u ⇒
-        val userFactory = new MessageFactory(u)
+        val userFactory = new MessageFactory(u.value)
         userFactory.JOIN(user, channel)
       }
       joinMessages.foreach(writer ! _)
@@ -28,11 +31,16 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
       writer ! macroResponse
     }
 
+    case Message(NewFbThreadCommand(threadName, threadId), _, _, _) if !channelIdMap.contains(threadId) ⇒ {
+      channelIdMap += (threadId → threadName)
+      if(!channels.contains(threadName)) channels += (threadName → new Channel(threadName))
+    }
+
     case Message(PrivmsgCommand, Prefix(user), Compound(list, message), _) ⇒ {
-      val channel = list.head.target
+      val channel = list.head.underlying
       channels(channel).log += message.text
-      val messages = channels(channel).users.filter(_ != user).map { u ⇒
-        val factory = new MessageFactory(u)
+      val messages = channels(channel).users.filter(_ != UserName(user)).map { u ⇒
+        val factory = new MessageFactory(u.value)
         factory.PRIVMSG(user, channel, message.text)
       }
       messages.foreach(writer ! _)
@@ -51,7 +59,7 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
     //    }
   }
   def isUserInChannel(user: String, channel: String): Boolean = {
-    // TODO: Implement creating channels
+    // TODO: Deprecate this, since users don't need to create chanels
     if (!channels.contains(channel)) channels += (channel → Channel("channel topic"))
     channels(channel).users.contains(user)
   }

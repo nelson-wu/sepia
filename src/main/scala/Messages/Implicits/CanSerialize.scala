@@ -8,7 +8,7 @@ trait CanSerialize[-B <: Params] {
 
 object CanSerialize {
   implicit object CanSerializeTarget extends CanSerialize[Target] {
-    override def serialize(params: Target): String = params.target
+    override def serialize(params: Target): String = params.underlying
   }
   implicit object CanSerializeSpecial extends CanSerialize[Special] {
     def serialize(params: Special): String = ":" + params.text

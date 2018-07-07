@@ -1,11 +1,13 @@
 package Messages
 
+import Messages.Implicits.ImplicitConversions.UserName
+
 class MessageFactory(recipient: String) {
   val serverName = "localhost"
 
-  def RPL_WELCOME(user: String): Message[Compound] = {
+  def RPL_WELCOME(user: UserName): Message[Compound] = {
     val params = Compound(
-      Seq(Target(user)),
+      Seq(UserTarget(user)),
       Special(s"Welcome to the network $user!")
     )
     Message[Compound](ReplyCommand("001"), Prefix(serverName), params, recipient)
@@ -13,31 +15,31 @@ class MessageFactory(recipient: String) {
   def ERR_NICKNAMEINUSE: Message[NoParams.type] = Message(ReplyCommand("433"), Prefix(serverName), NoParams, recipient)
   def JOIN(user: String, channel: String): Message[Special] = Message(JoinCommand, Prefix(user), Special(channel), recipient)
 
-  def RPL_ENDOFNAMES(user: String, channel: String): Message[Compound] = {
+  def RPL_ENDOFNAMES(user: UserName, channel: String): Message[Compound] = {
     val params = Compound(
-      Seq(Target(user), Target(channel)),
+      Seq(UserTarget(user), AnyTarget(channel)),
       Special("End of /NAMES list")
     )
     Message(ReplyCommand("366"), Prefix(serverName), params, recipient)
   }
 
-  def RPL_NAMREPLY(user: String, channel: String, userList: Seq[String]): Message[Compound] = {
+  def RPL_NAMREPLY(user: UserName, channel: String, userList: Seq[UserName]): Message[Compound] = {
     val params = Compound(
       Seq(
-        Target(user),
-        Target("="),
-        Target(channel)
+        UserTarget(user),
+        AnyTarget("="),
+        AnyTarget(channel)
       ),
       Special(userList.mkString(" "))
     )
     Message(ReplyCommand("353"), Prefix(serverName), params, recipient)
   }
 
-  def RPL_TOPIC(user: String, channel: String, topic: String): Message[Compound] = {
+  def RPL_TOPIC(user: UserName, channel: String, topic: String): Message[Compound] = {
     val params = Compound(
       Seq(
-        Target(user),
-        Target(channel)
+        UserTarget(user),
+        AnyTarget(channel)
       ),
       Special(topic)
     )
@@ -46,7 +48,7 @@ class MessageFactory(recipient: String) {
 
   def PRIVMSG(user: String, channel: String, text: String): Message[Compound] = {
     val params = Compound(
-      Seq(Target(channel)),
+      Seq(AnyTarget(channel)),
       Special(text)
     )
     Message(PrivmsgCommand, Prefix(user), params, recipient)
