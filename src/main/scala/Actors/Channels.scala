@@ -12,7 +12,7 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
   private val channelIdMap = collection.mutable.Map[ThreadId, String]()
 
   def receive = {
-    case Message(JoinCommand, Prefix(user), Target(channel), _) if !isUserInChannel(user, channel) ⇒ {
+    case Message(JoinCommand, Prefix(user), Middle(channel), _) if !isUserInChannel(user, channel) ⇒ {
       val factory = new MessageFactory(user)
       import factory._
       channels(channel).users += user
@@ -46,7 +46,7 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
       messages.foreach(writer ! _)
     }
 
-    case Message(PartCommand, Prefix(user), Target(channel), _) if isUserInChannel(user, channel)⇒ {
+    case Message(PartCommand, Prefix(user), Middle(channel), _) if isUserInChannel(user, channel)⇒ {
       channels(channel).users -= user
     }
 

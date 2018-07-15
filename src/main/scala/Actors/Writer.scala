@@ -12,8 +12,8 @@ class Writer extends Actor {
 
   var connectionList = mutable.Map[String, Connection]()
 
-  val messageTarget = TypeCase[Message[Target]]
-  val messageSpecial = TypeCase[Message[Special]]
+  val messageTarget = TypeCase[Message[Middle]]
+  val messageSpecial = TypeCase[Message[Trailing]]
   val messageCompound = TypeCase[Message[Compound]]
 
   def receive = {

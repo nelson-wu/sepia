@@ -28,7 +28,7 @@ class Dispatcher(connection: Connection, channelsActor: ActorRef, usersActor: Ac
         }
 
         def updateCurrentNick(message: Messages.Message[_]): Unit = message match {
-          case Message(NickCommand, _, Target(nick), _) ⇒
+          case Message(NickCommand, _, Middle(nick), _) ⇒
             userNick = nick
             implicit val timeout = Timeout(5 seconds)
             val future = writerActor ? (userNick, connection)

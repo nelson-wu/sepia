@@ -1,6 +1,6 @@
 package Messages.Implicits
 
-import Messages.{Command, Params, Target}
+import Messages.{Command, Params, Middle}
 
 trait CanParse[-A <: Command] {
   def parse(tokens: Seq[String]): Params
@@ -10,7 +10,7 @@ trait CanParse[-A <: Command] {
 object CanParse {
   implicit val CanParseOnlyTarget: CanParse[Command] = new CanParse[Command]{
     def parse(tokens: Seq[String]): Params = {
-      Target(tokens(0))
+      Middle(tokens(0))
     }
   }
 }

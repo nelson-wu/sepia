@@ -7,6 +7,9 @@ import scala.util.Try
 
 object MessageSerializer {
   val CRLF = "\r\n"
+  def resolveType[P <: Params : CanSerialize](message: Message[Any]): Option[Message[P]] = {
+
+  }
   def serialize[P <: Params : CanSerialize](messages: Message[P]*): ByteString = {
     messages.foldLeft(ByteString()) { (acc, message) ⇒
       val prefix = ":" + message.prefix.name
