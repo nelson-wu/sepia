@@ -17,22 +17,26 @@ class Writer extends Actor {
   val messageCompound = TypeCase[Message[Compound]]
 
   def receive = {
-    case messageTarget(n) if connectionList.contains(n.recipient) ⇒
-      connectionList(n.recipient).ref ! Write(serialize(n))
-      println(s"Sending: ${serialize(n).utf8String}")
-    case messageSpecial(n) if connectionList.contains(n.recipient) ⇒
-      connectionList(n.recipient).ref ! Write(serialize(n))
-      println(s"Sending: ${serialize(n).utf8String}")
-    case messageCompound(n) if connectionList.contains(n.recipient) ⇒
-      connectionList(n.recipient).ref ! Write(serialize(n))
-      println(s"Sending: ${serialize(n).utf8String}")
+    case message : Message[Params] ⇒
+      println("Message: " + message)
+      parseAndSendMessage(message)
+//    case messageTarget(n) if connectionList.contains(n.recipient) ⇒
+//      connectionList(n.recipient).ref ! Write(serialize(n))
+//      println(s"Sending: ${serialize(n).utf8String}")
+//    case messageSpecial(n) if connectionList.contains(n.recipient) ⇒
+//      connectionList(n.recipient).ref ! Write(serialize(n))
+//      println(s"Sending: ${serialize(n).utf8String}")
+//    case messageCompound(n) if connectionList.contains(n.recipient) ⇒
+//      connectionList(n.recipient).ref ! Write(serialize(n))
+//      println(s"Sending: ${serialize(n).utf8String}")
     case (s: String, c: Connection) ⇒
       connectionList += (s → c)
       sender ! "ACK"
-    case p : Product ⇒ p.productIterator.foreach( e ⇒ parseMessage(e.asInstanceOf[Message[Params]]))
+    case a : Any ⇒ println("Any: " + a)
+//    case p : Product ⇒ p.productIterator.foreach( e ⇒ parseMessage(e.asInstanceOf[Message[Params]]))
   }
 
-  def parseMessage(m: Message[_]): Unit = m match {
+  def parseAndSendMessage(m: Message[_]): Unit = m match {
     case messageTarget(n) if connectionList.contains(n.recipient)⇒
       connectionList(n.recipient).ref ! Write(serialize(n))
       println(s"Sending: ${serialize(n).utf8String}")

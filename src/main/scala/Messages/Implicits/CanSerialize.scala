@@ -7,18 +7,15 @@ trait CanSerialize[-B <: Params] {
 }
 
 object CanSerialize {
-  implicit object CanSerializeTarget extends CanSerialize[Middle] {
+  implicit object CanSerializeMiddle extends CanSerialize[Middle] {
     override def serialize(params: Middle): String = params.underlying
   }
-  implicit object CanSerializeSpecial extends CanSerialize[Trailing] {
+  implicit object CanSerializeTrailing extends CanSerialize[Trailing] {
     def serialize(params: Trailing): String = ":" + params.text
   }
   implicit object CanSerializeNone extends CanSerialize[NoParams.type] {
     def serialize(params: NoParams.type): String = ""
   }
-//  implicit object CanSerializeReply extends CanSerialize[ReplyCommand] {
-//    def serialize(params: ReplyCommand): String =
-//  }
   implicit object CanSerializeCompound extends CanSerialize[Compound] {
     def serialize(params: Compound): String = {
       val targets = params.targets.map(implicitly[CanSerialize[Middle]].serialize).mkString(" ")

@@ -2,7 +2,7 @@ name := "akka-tcp"
 
 version := "1.0.0"
 
-scalaVersion := "2.12.4"
+scalaVersion := "2.12.6"
 cancelable in Global := true
 
 resolvers += "akka" at "http://repo.akka.io/snapshots"

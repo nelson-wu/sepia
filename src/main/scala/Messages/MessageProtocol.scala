@@ -9,11 +9,7 @@ case class Message[+P <: Params](command: Command, prefix: Prefix, params: P = N
 case class Prefix(name: String)
 
 trait Params
-trait Middle extends Params {val underlying: String }
-case class UserMiddle(target: UserName) extends Middle {
-  val underlying: String = target.value
-}
-case class AnyMiddle(underlying: String) extends Middle
+case class Middle(underlying: String) extends Params
 case class UserList(channel: String, users: Seq[String]) extends Params
 case class Trailing(text: String) extends Params
 case class Compound(targets: Seq[Middle], special: Trailing) extends Params
@@ -43,10 +39,3 @@ object Command {
   }
 }
 
-object Middle{
-  def apply(value: String) = new AnyMiddle(value)
-  def unapply(arg: Middle): Option[String] = arg.underlying match {
-    case null ⇒ None
-    case s ⇒ Some(s)
-  }
-}

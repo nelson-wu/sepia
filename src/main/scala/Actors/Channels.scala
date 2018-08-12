@@ -7,7 +7,7 @@ import Messages._
 import scala.collection.mutable
 
 class Channels(writer: ActorRef) extends Actor with ActorLogging {
-  case class Channel (topic: String, users: mutable.Buffer[UserName] = mutable.Buffer(), log: mutable.Buffer[String] = mutable.Buffer())
+  case class Channel (topic: Option[String] = None, users: mutable.Buffer[UserName] = mutable.Buffer(), log: mutable.Buffer[String] = mutable.Buffer())
   private val channels = collection.mutable.Map[String, Channel]()
   private val channelIdMap = collection.mutable.Map[ThreadId, String]()
 
@@ -23,17 +23,22 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
       }
       joinMessages.foreach(writer ! _)
 
-      val macroResponse = (
-        RPL_TOPIC(user, channel, channels(channel).topic),
+      val topicReply = channels(channel).topic match {
+        case Some(setTopic) ⇒ RPL_TOPIC(user, channel, setTopic)
+        case None ⇒ RPL_NOTOPIC(user, channel)
+      }
+
+      val channelInfo = Seq(
+        topicReply,
         RPL_NAMREPLY(user, channel, channels(channel).users),
         RPL_ENDOFNAMES(user, channel)
       )
-      writer ! macroResponse
+      channelInfo foreach(writer ! _)
     }
 
     case Message(NewFbThreadCommand(threadName, threadId), _, _, _) if !channelIdMap.contains(threadId) ⇒ {
       channelIdMap += (threadId → threadName)
-      if(!channels.contains(threadName)) channels += (threadName → new Channel(threadName))
+      if(!channels.contains(threadName)) channels += (threadName → new Channel())
     }
 
     case Message(PrivmsgCommand, Prefix(user), Compound(list, message), _) ⇒ {
@@ -60,7 +65,7 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
   }
   def isUserInChannel(user: String, channel: String): Boolean = {
     // TODO: Deprecate this, since users don't need to create chanels
-    if (!channels.contains(channel)) channels += (channel → Channel("channel topic"))
+    if (!channels.contains(channel)) channels += (channel → Channel(None))
     channels(channel).users.contains(user)
   }
 
