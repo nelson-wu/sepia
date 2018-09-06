@@ -1,6 +1,6 @@
 package Actors
 
-import FbMessenger.{FbThread, Participant}
+import FbMessenger.{BaseFbClient, FbMessage, FbThread, Participant}
 import Messages.Implicits.ImplicitConversions.ThreadId
 import Messages._
 import akka.actor.{Actor, ActorLogging, ActorRef, Timers}
@@ -28,7 +28,7 @@ import scala.util.{Failure, Success}
 //     - If the returned number is greater, for that thread, call thread-history and send unread
 //       messages as PRIVMSGs to Channels actor.
 
-class FbMessenger(users: ActorRef, channels: ActorRef) extends Actor with ActorLogging with Timers {
+class FbMessenger(users: ActorRef, channels: ActorRef, client: BaseFbClient) extends Actor with ActorLogging with Timers {
   import akka.pattern.pipe
   import context.dispatcher
   import Timing._
@@ -41,6 +41,11 @@ class FbMessenger(users: ActorRef, channels: ActorRef) extends Actor with ActorL
 
   val threads = collection.mutable.HashSet[FbThread]()
   var messagesReceived = collection.mutable.Map[ThreadId, Int]()
+
+  case class FbMessengerState(
+                             threads: Seq[FbThread] = Seq.empty,
+                             messages: Map[ThreadId, Seq[FbMessage]] = Map.empty
+                             )
 
   override def receive: Receive = {
     case FirstTick ⇒ timers.startPeriodicTimer(TickKey, Tick, 10 seconds)
@@ -85,6 +90,10 @@ class FbMessenger(users: ActorRef, channels: ActorRef) extends Actor with ActorL
   def addNewThreads(newThreads: Set[FbThread]): Unit = {
     newThreads.foreach(t ⇒ channels ! Message(NewFbThreadCommand(t.name, t.threadId), Prefix(""), NoParams, ""))
     threads ++= newThreads
+  }
+
+  def synchronize(oldState: FbMessengerState): FbMessengerState = {
+
   }
 
   private object Timing {

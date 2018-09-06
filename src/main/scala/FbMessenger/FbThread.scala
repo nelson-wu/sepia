@@ -19,4 +19,3 @@ object FbThread {
     }.toOption
 
 }
-

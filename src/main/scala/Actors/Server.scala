@@ -28,6 +28,7 @@ class Server extends Actor {
     case c @ Connected(remote, local) ⇒ {
       val connection = new Connection(sender())
 
+
       context.actorOf(Props(classOf[Dispatcher], connection.ref, channelsActor, usersActor, writerActor))
     }
   }
