@@ -4,9 +4,11 @@ import Messages.Implicits.ImplicitConversions.ThreadId
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.util.ByteString
 import ircserver.Globals
-import play.api.libs.json.{JsArray, Json}
+import org.joda.time.Instant
+import play.api.libs.json.{JsArray, JsValue, Json}
 
 import scala.concurrent.Future
 
@@ -14,7 +16,11 @@ import scala.concurrent.Future
   * Created by Nelson on 2018/08/12.
   */
 class FbClient(system: ActorSystem) extends BaseFbClient{
-  override def getCurrentId(): String = ???
+  import system.dispatcher
+
+  implicit val _system = system
+  final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(system))
+  override def getCurrentId(): Future[String] = ???
 
   override def getThreadList(limit: Option[Int]): Future[Seq[FbThread]] = {
     val fbEndpoint = "http://" + Globals.fbServerName + ":" + Globals.fbPort
@@ -25,12 +31,12 @@ class FbClient(system: ActorSystem) extends BaseFbClient{
           .map(body ⇒ Json.parse(body.utf8String).as[JsArray])
           .map{ x =>
             println(x)
-            x.value.flatMap(FbThread.apply)
+            x.value.flatMap(FbThread.apply(_:JsValue))
           }
       }
 
     threadList
   }
 
-  override def getThreadHistory(threadId: ThreadId, highWaterMark: Long, limit: _root_.scala.Option[Int]): scala.Seq[_root_.FbMessenger.FbMessage] = ???
+  def getThreadHistory(threadId: ThreadId, highWaterMark: Option[Instant], limit: Option[Int]): Future[Seq[FbMessage]] = ???
 }

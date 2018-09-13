@@ -1,12 +1,12 @@
 package Actors
 
-import FbMessenger.{BaseFbClient, FbMessage, FbThread, Participant}
+import FbMessenger.{BaseFbClient, FbMessage, FbMessengerState, FbThread}
 import Messages.Implicits.ImplicitConversions.ThreadId
 import Messages._
 import akka.actor.{Actor, ActorLogging, ActorRef, Timers}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.util.ByteString
 import ircserver.Globals
 import play.api.libs.json.{JsArray, Json}
@@ -28,12 +28,11 @@ import scala.util.{Failure, Success}
 //     - If the returned number is greater, for that thread, call thread-history and send unread
 //       messages as PRIVMSGs to Channels actor.
 
-class FbMessenger(users: ActorRef, channels: ActorRef, client: BaseFbClient) extends Actor with ActorLogging with Timers {
-  import akka.pattern.pipe
-  import context.dispatcher
+class FbMessenger(users: ActorRef, channels: ActorRef, client: BaseFbClient, test: Boolean) extends Actor with ActorLogging with Timers {
   import Timing._
+  import context.dispatcher
 
-  timers.startSingleTimer(TickKey, FirstTick, 500 millis)
+  if (test) timers.startSingleTimer(TickKey, FirstTick, 500 millis)
 
   final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
   val fbEndpoint = "http://" + Globals.fbServerName + ":" + Globals.fbPort
@@ -42,10 +41,7 @@ class FbMessenger(users: ActorRef, channels: ActorRef, client: BaseFbClient) ext
   val threads = collection.mutable.HashSet[FbThread]()
   var messagesReceived = collection.mutable.Map[ThreadId, Int]()
 
-  case class FbMessengerState(
-                             threads: Seq[FbThread] = Seq.empty,
-                             messages: Map[ThreadId, Seq[FbMessage]] = Map.empty
-                             )
+
 
   override def receive: Receive = {
     case FirstTick ⇒ timers.startPeriodicTimer(TickKey, Tick, 10 seconds)
@@ -90,10 +86,6 @@ class FbMessenger(users: ActorRef, channels: ActorRef, client: BaseFbClient) ext
   def addNewThreads(newThreads: Set[FbThread]): Unit = {
     newThreads.foreach(t ⇒ channels ! Message(NewFbThreadCommand(t.name, t.threadId), Prefix(""), NoParams, ""))
     threads ++= newThreads
-  }
-
-  def synchronize(oldState: FbMessengerState): FbMessengerState = {
-
   }
 
   private object Timing {
