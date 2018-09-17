@@ -58,6 +58,19 @@ class FbMessengerSpec extends WordSpec
         FbThread("newThread", "1", false, 2, Set())
       )
     }
+    "not return same threads that have changed" in {
+      val newState = FbMessengerState(
+        threads = Seq(
+          FbThread("oldThread", "2", false, 1, Set())
+        )
+      )
+      val oldState = FbMessengerState(
+        threads = Seq(FbThread("oldThread", "2", false, 1, Set(Participant("a", "a"))))
+      )
+      FbMessengerState
+        .deltaThreads(oldState.threads, newState.threads) shouldBe empty
+    }
+
     "return new messages" in {
       val participants = Set(
         Participant("user1", "userId1")
@@ -106,6 +119,9 @@ class FbMessengerSpec extends WordSpec
         .minus.head
         ._2 shouldEqual Set(bob)
     }
+
+    // TODO: actually implement this
+    "return renamed threads" ignore {}
   }
   "Synchronize method" must {
     "return new state when old state is empty" in {
