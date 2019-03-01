@@ -11,6 +11,7 @@ import akka.util.ByteString
 import ircserver.Globals
 import play.api.libs.json.{JsArray, Json}
 
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -32,46 +33,49 @@ class FbMessenger(users: ActorRef, channels: ActorRef, client: BaseFbClient, tes
   import Timing._
   import context.dispatcher
 
-  if (test) timers.startSingleTimer(TickKey, FirstTick, 500 millis)
+  if (!test) timers.startSingleTimer(TickKey, FirstTick, 500 millis)
 
   final implicit val materializer: ActorMaterializer = ActorMaterializer(ActorMaterializerSettings(context.system))
   val fbEndpoint = "http://" + Globals.fbServerName + ":" + Globals.fbPort
   val http = Http(context.system)
 
   val threads = collection.mutable.HashSet[FbThread]()
-  var messagesReceived = collection.mutable.Map[ThreadId, Int]()
+  var messagesReceived = collection.mutable.Map[ThreadId, Int]( )
 
 
-
+  def getState(): Future[FbMessengerState] = {
+    val threadList = client.getThreadList(Some(200))
+    val threadHistory = threadList.flatMap(thread ⇒ {
+      Future {
+        thread.map(t ⇒ (t.threadId, Await.result(client.getThreadHistory(t.threadId, None, Some(10)), 5 seconds)))
+      }
+    })
+    (threadList zip threadHistory).map{ case (list, hist) ⇒ FbMessengerState(
+      threads = list,
+      messages = hist.toMap
+    )}
+  }
   override def receive: Receive = {
     case FirstTick ⇒ timers.startPeriodicTimer(TickKey, Tick, 10 seconds)
     case Tick ⇒ {
-      val threadList = http.singleRequest(HttpRequest(uri = s"$fbEndpoint/thread-list"))
-      .flatMap {
-        case HttpResponse(StatusCodes.OK, _, entity, _) ⇒ entity.dataBytes.runFold(ByteString(""))(_ ++ _)
-          .map(body ⇒ Json.parse(body.utf8String).as[JsArray])
-          .map{ x =>
-            println(x)
-            x.value.map(FbThread.apply)
-          }
-      }
+      val newState = getState()
 
-      threadList.onComplete{
-        case Success(receivedThreads) ⇒
-          val newThreads = receivedThreads.flatten.toSet.diff(threads)
-          addNewThreads(newThreads)
-
-//          addNewUsers()
-
-          receivedThreads.foreach{
-          case Some(thread) ⇒ {
-//            messagesReceived.update(thread.threadId, Math.max(messagesReceived(thread.threadId), thread.messageCount))
-//            receivedThreads.add(thread)
-          }
-          case None ⇒ println("None");
-        }
-        case Failure(f) ⇒ println(f)
-      }
+//      threadList.onComplete{
+//        case Success(receivedThreads) ⇒
+//          val newThreads =
+//            addNewThreads(newThreads)
+//
+//          //          addNewUsers()
+//
+//          receivedThreads.foreach{
+//            case Some(thread) ⇒ {
+//              //            messagesReceived.update(thread.threadId, Math.max(messagesReceived(thread.threadId), thread.messageCount))
+//              //            receivedThreads.add(thread)
+//            }
+//            case None ⇒ println("None");
+//          }
+//        case Failure(f) ⇒ println(f)
+//      }
 
     }
     //    case HttpResponse(StatusCodes.OK, headers, entity, _) ⇒
@@ -87,13 +91,11 @@ class FbMessenger(users: ActorRef, channels: ActorRef, client: BaseFbClient, tes
     newThreads.foreach(t ⇒ channels ! Message(NewFbThreadCommand(t.name, t.threadId), Prefix(""), NoParams, ""))
     threads ++= newThreads
   }
-
-  private object Timing {
-    case object Tick
-    case object FirstTick
-    case object TickKey
-  }
 }
 
-
+object Timing {
+  case object Tick
+  case object FirstTick
+  case object TickKey
+}
 

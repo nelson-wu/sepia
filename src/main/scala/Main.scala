@@ -16,6 +16,7 @@ object Globals {
   val port = 35353
   val fbServerName = "localhost"
   val fbPort = 39393
+  val facebook = "facebook"
 }
 
 object Main extends App{
