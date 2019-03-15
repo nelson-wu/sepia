@@ -12,7 +12,10 @@ case class FbMessengerState(
                              messages: Map[ThreadId, Seq[FbMessage]] = Map.empty
                            )
 
-case class DeltaUsers(plus: Map[ThreadId, Set[Participant]] = Map.empty, minus: Map[ThreadId, Set[Participant]] = Map.empty)
+case class DeltaUsers(
+                       joined: Map[ThreadId, Set[Participant]] = Map.empty,
+                       parted: Map[ThreadId, Set[Participant]] = Map.empty
+                     )
 
 object FbMessengerState {
 
@@ -23,8 +26,8 @@ object FbMessengerState {
 
     val newThreads = (current.threads ++ threadChanges)
       .map { t =>
-        if ((userChanges.plus.keys.toSeq contains t.threadId) || (userChanges.minus.keys.toSeq contains t.threadId)) {
-          val newUsers = t.participants ++ userChanges.plus(t.threadId) -- userChanges.minus(t.threadId)
+        if ((userChanges.joined.keys.toSeq contains t.threadId) || (userChanges.parted.keys.toSeq contains t.threadId)) {
+          val newUsers = t.participants ++ userChanges.joined(t.threadId) -- userChanges.parted(t.threadId)
           t.copy(participants = newUsers)
         }
         else t
@@ -57,19 +60,26 @@ object FbMessengerState {
       )
 
       delta.copy(
-        plus = delta.plus ++ joinedUsers.getOrElse(Map.empty),
-        minus = delta.minus ++ leftUsers.getOrElse(Map.empty)
+        joined = delta.joined ++ joinedUsers.getOrElse(Map.empty),
+        parted = delta.parted ++ leftUsers.getOrElse(Map.empty)
       )
     }
   }
 
   // messages are monotonically increasing
-  def deltaMessages(current: Map[ThreadId, Seq[FbMessage]], next: Map[ThreadId, Seq[FbMessage]]): Map[ThreadId, Seq[FbMessage]] = {
-    next.map{ case (id, newMessages) ⇒
-        val oldMessages = current(id)
-        val latestReadMessage = oldMessages.maxBy(_.timestamp.getMillis)
-        val newerMessages = next(id).filter(_.timestamp.getMillis > latestReadMessage.timestamp.getMillis)
-        id → newerMessages
+  def deltaMessages(oldThreads: Map[ThreadId, Seq[FbMessage]], newThreads: Map[ThreadId, Seq[FbMessage]]): Map[ThreadId, Seq[FbMessage]] = {
+    newThreads.map{ case (threadId, newMessages) ⇒
+        val oldMessagesMaybe = oldThreads.get(threadId)
+
+        val latestReadTimestamp = oldMessagesMaybe.map(_
+          .map(_.timestamp.getMillis).max
+        ).getOrElse(0L)
+
+        val newerMessagesMaybe = newThreads
+          .get(threadId)
+          .map(_.filter(_.timestamp.getMillis > latestReadTimestamp))
+
+        threadId → newerMessagesMaybe.getOrElse(Seq())
     }
   }
 }

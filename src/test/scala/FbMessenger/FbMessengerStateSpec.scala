@@ -47,18 +47,18 @@ class FbMessengerStateSpec extends WordSpec
       )
       val oldState = FbMessengerState(
         threads = Seq(FbThread("thread", "thread1", true, 1, participants)),
-        messages = Map(ThreadId("thread1") → Seq(FbMessage("hi", "userId1", new Instant(1))))
+        messages = Map(ThreadId("thread1") → Seq(FbMessage("hi", "userId1", "user1", new Instant(1))))
       )
       val newState = FbMessengerState(
         threads = oldState.threads,
         messages = Map(ThreadId("thread1") → Seq(
-          FbMessage("hello", "userId1", new Instant(2))
+          FbMessage("hello", "userId1", "user1", new Instant(2))
         ))
       )
 
       FbMessengerState
         .deltaMessages(oldState.messages, newState.messages)(ThreadId("thread1")) shouldEqual Seq(
-        FbMessage("hello", "userId1", new Instant(2))
+        FbMessage("hello", "userId1", "user1", new Instant(2))
       )
     }
     "return new members of threads" in {
@@ -72,7 +72,7 @@ class FbMessengerStateSpec extends WordSpec
       )
       FbMessengerState
         .deltaUsers(oldState.threads, newState.threads)
-        .plus.head
+        .joined.head
         ._2 shouldEqual Set(bob)
     }
     "return members in threads who left" in {
@@ -86,7 +86,7 @@ class FbMessengerStateSpec extends WordSpec
       )
       FbMessengerState
         .deltaUsers(oldState.threads, newState.threads)
-        .minus.head
+        .parted.head
         ._2 shouldEqual Set(bob)
     }
 
@@ -126,20 +126,20 @@ class FbMessengerStateSpec extends WordSpec
       )
       val oldState = FbMessengerState(
         threads = Seq(FbThread("thread", "thread1", true, 1, participants)),
-        messages = Map(ThreadId("thread1") → Seq(FbMessage("hi", "userId1", new Instant(1))))
+        messages = Map(ThreadId("thread1") → Seq(FbMessage("hi", "userId1", "user1", new Instant(1))))
       )
       val newState = FbMessengerState(
         threads = oldState.threads,
         messages = Map(ThreadId("thread1") → Seq(
-          FbMessage("hello", "userId1", new Instant(2))
+          FbMessage("hello", "userId1", "user1", new Instant(2))
         ))
       )
 
       FbMessengerState
         .synchronize(oldState, newState)
         .messages(ThreadId("thread1")) shouldEqual Seq(
-        FbMessage("hi", "userId1", new Instant(1)),
-        FbMessage("hello", "userId1", new Instant(2))
+        FbMessage("hi", "userId1", "user1", new Instant(1)),
+        FbMessage("hello", "userId1", "user1", new Instant(2))
       )
     }
 

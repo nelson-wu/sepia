@@ -1,9 +1,10 @@
 package Actors
 
 import Messages.{Message, MessageSerializer, Params}
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
+
 import scala.concurrent.duration._
-import akka.testkit.TestProbe
+import akka.testkit.{TestActor, TestProbe}
 import org.scalatest.{Matchers, WordSpec}
 
 /**
@@ -26,6 +27,15 @@ class IrcTestProbe(system: ActorSystem) extends TestProbe(system)
     }
   }
 
+  def expectWithinDuration[T](msg: T) = {
+    fishForMessage(3 seconds) {
+      case received: T ⇒ received == msg
+      case x: Any ⇒
+        println(x)
+        false
+    }
+  }
+
   // TODO: make this actually work
   def expectNoSuchIrcMessage(recipient: String, messages: String*) = expectMsgPF() {
     case msg: Message[Params] ⇒
@@ -35,4 +45,19 @@ class IrcTestProbe(system: ActorSystem) extends TestProbe(system)
       if (exactSameMessage) throw new Exception(s"Did not expect to receive $receivedMessage")
   }
 
+}
+
+object IrcTestProbe{
+  def apply(tag: String)(implicit system: ActorSystem): IrcTestProbe = {
+    val probe = new IrcTestProbe(system)
+    probe.setAutoPilot(new TestActor.AutoPilot {
+      def run(sender: ActorRef, msg: Any) = {
+        val other = sender.path
+        val me = probe.ref.path
+        println(s"$tag $me received $msg from $other")
+        this
+      }
+    })
+    probe
+  }
 }
