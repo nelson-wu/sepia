@@ -25,18 +25,13 @@ object FbMessengerState {
     val messageChanges = deltaMessages(current.messages, next.messages)
 
     val newThreads = (current.threads ++ threadChanges)
-      .map { t =>
-        if ((userChanges.joined.keys.toSeq contains t.threadId) || (userChanges.parted.keys.toSeq contains t.threadId)) {
-          val newUsers = t.participants ++ userChanges.joined(t.threadId) -- userChanges.parted(t.threadId)
-          t.copy(participants = newUsers)
-        }
-        else t
-      }
+      .map(t ⇒ synchronizeUsersInThread(userChanges, t))
 
     val newMessages = current.messages.map {
-      case (thread, messages) => if (messageChanges contains thread) {
-        thread -> (messages ++ messageChanges(thread))
-      } else thread -> messages
+      case (thread, messages) =>
+        if (messageChanges contains thread)
+          thread -> (messages ++ messageChanges(thread))
+        else thread -> messages
     }
 
     current.copy(
@@ -45,23 +40,41 @@ object FbMessengerState {
     )
   }
 
+  def synchronizeUsersInThread(userChanges: DeltaUsers, t: FbThread): FbThread = {
+    if ((userChanges.joined.keys.toSeq contains t.threadId)
+      || (userChanges.parted.keys.toSeq contains t.threadId)) {
+
+      val joinedUsersMaybe = userChanges.joined.get(t.threadId)
+      val leftUsersMaybe = userChanges.parted.get(t.threadId)
+
+      val withJoined = joinedUsersMaybe.fold(t.participants)(t.participants ++ _)
+      val withJoinedLeft = leftUsersMaybe.fold(withJoined)(withJoined -- _)
+
+      t.copy(participants = withJoinedLeft)
+    }
+    else t
+  }
+
   // threads are monotonically increasing
   def deltaThreads(current: Seq[FbThread], next: Seq[FbThread]): Seq[FbThread] =
-    next.filter(t ⇒ !current.exists(_.threadId == t.threadId))
+    next.filter(newThread ⇒ !current.exists(_.threadId == newThread.threadId))
 
   def deltaUsers(current: Seq[FbThread], next: Seq[FbThread]): DeltaUsers = {
     next.foldLeft(DeltaUsers()){(delta, newThread) ⇒
       val oldThread = current.find(_.threadId == newThread.threadId)
       val joinedUsers = oldThread.map(thread ⇒
         Map(thread.threadId → (newThread.participants diff thread.participants))
-      )
-      val leftUsers = oldThread.map(thread ⇒
-        Map(thread.threadId → (thread.participants diff newThread.participants))
+      ).getOrElse(
+        Map(newThread.threadId → newThread.participants)
       )
 
+      val leftUsers = oldThread.map(thread ⇒
+        Map(thread.threadId → (thread.participants diff newThread.participants))
+      ).getOrElse(Map())
+
       delta.copy(
-        joined = delta.joined ++ joinedUsers.getOrElse(Map.empty),
-        parted = delta.parted ++ leftUsers.getOrElse(Map.empty)
+        joined = delta.joined ++ joinedUsers,
+        parted = delta.parted ++ leftUsers
       )
     }
   }

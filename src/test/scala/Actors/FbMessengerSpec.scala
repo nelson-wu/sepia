@@ -61,7 +61,9 @@ class FbMessengerSpec extends WordSpec
         val (probe, fbMessenger) = setup(client, "FbThread")
         fbMessenger ! Timing.Tick
         fbMessenger ! Timing.Tick
-        probe.expectWithinDuration(NewFbThread("#first-thread", ThreadId("1")))
+        probe.expectWithinDuration(
+          NewFbThread("#first-thread", ThreadId("1"))
+        )
       }
       "send FbUserJoin messages for new users in new threads" in {
         val client = StubFbClientCreator(
@@ -76,11 +78,9 @@ class FbMessengerSpec extends WordSpec
         val (probe, fbMessenger) = setup(client)
         fbMessenger ! Timing.Tick
         fbMessenger ! Timing.Tick
-        probe.fishForMessage(10 seconds) {
-          case msg: FbUserJoin if msg == FbUserJoin(UserName("bob"), "1")
-            ⇒ true
-          case _ ⇒ false
-        }
+        probe.expectWithinDuration(
+          FbUserJoin(UserName("bob"), "1")
+        )
       }
       "send FbUserJoin messages for new users in old threads" in {
         val client = StubFbClientCreator(
@@ -96,11 +96,9 @@ class FbMessengerSpec extends WordSpec
         val (probe, fbMessenger) = setup(client)
         fbMessenger ! Timing.Tick
         fbMessenger ! Timing.Tick
-        probe.fishForMessage(10 seconds) {
-          case msg: FbUserJoin if msg == FbUserJoin("bobb", "1")
-            ⇒ true
-          case _ ⇒ false
-        }
+        probe.expectWithinDuration(
+          FbUserJoin("BobB", "1")
+        )
       }
     }
   }

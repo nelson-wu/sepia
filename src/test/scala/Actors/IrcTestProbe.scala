@@ -10,7 +10,7 @@ import org.scalatest.{Matchers, WordSpec}
 /**
   * Created by Nelson on 2018/07/20.
   */
-class IrcTestProbe(system: ActorSystem) extends TestProbe(system)
+class IrcTestProbe(system: ActorSystem, timeout: Duration = 3 seconds) extends TestProbe(system)
   with Matchers {
   def expectIrcMessage(recipient: String, expectedMessages: String*) = {
     fishForMessage(100 millis){
@@ -28,10 +28,9 @@ class IrcTestProbe(system: ActorSystem) extends TestProbe(system)
   }
 
   def expectWithinDuration[T](msg: T) = {
-    fishForMessage(3 seconds) {
+    fishForMessage(timeout) {
       case received: T ⇒ received == msg
       case x: Any ⇒
-        println(x)
         false
     }
   }
@@ -48,8 +47,8 @@ class IrcTestProbe(system: ActorSystem) extends TestProbe(system)
 }
 
 object IrcTestProbe{
-  def apply(tag: String)(implicit system: ActorSystem): IrcTestProbe = {
-    val probe = new IrcTestProbe(system)
+  def apply(tag: String, timeout: Duration = 3 seconds)(implicit system: ActorSystem): IrcTestProbe = {
+    val probe = new IrcTestProbe(system, timeout)
     probe.setAutoPilot(new TestActor.AutoPilot {
       def run(sender: ActorRef, msg: Any) = {
         val other = sender.path
