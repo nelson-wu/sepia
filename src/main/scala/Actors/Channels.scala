@@ -1,8 +1,8 @@
 package Actors
 
-import Messages.Implicits.ImplicitConversions.{ChannelName, ThreadId, UserName}
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import Messages.Implicits.ImplicitConversions.{ThreadId, UserName}
 import Messages._
+import akka.actor.{Actor, ActorLogging, ActorRef}
 
 import scala.collection.mutable
 
@@ -51,13 +51,20 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
       channels(channel).users -= user
     }
 
-    //    case Privmsg(user, channel, message) ⇒ {
-    //      val newLog = channels(channel).log :+ message
-    //      val newChannel = channels(channel).copy(log = newLog)
-    //      channels(channel) = newChannel
-    //      println("Log: ")
-    //      channels(channel).log foreach { println _ }
-    //    }
+    case NewFbThread(channelName, threadId) => channelIdMap += (threadId -> channelName.value)
+
+    case FbUserJoin(userName, threadId) => {
+      val factory = new MessageFactory("self")
+      val channel = channelIdMap(threadId)
+      self ! factory.JOIN(userName.value, channel)
+    }
+
+    case NewFbMessage(userName, threadId, text) => {
+      val factory = new MessageFactory("self")
+      val channel = channelIdMap(threadId)
+      self ! factory.PRIVMSG(userName.value, channel, text)
+    }
+
   }
   def isUserInChannel(user: String, channel: String): Boolean = {
     // TODO: Deprecate this, since users don't need to create chanels

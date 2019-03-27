@@ -1,18 +1,16 @@
 package Actors
 
+import Messages.Implicits.ImplicitConversions.{ChannelName, ThreadId, UserName}
 import Messages._
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestKit}
+import akka.actor.{ActorSystem, Props}
 import ircserver.Globals
 import org.scalatest.{BeforeAndAfterEach, WordSpecLike}
-
-import scala.concurrent.duration._
 
 class ChannelsSpec extends WordSpecLike
   with BeforeAndAfterEach
 {
 
-  def handle = afterWord("handle")
+  def receive = afterWord("receive")
   implicit val source = "testUser"
   val system = ActorSystem("channels-spec")
 
@@ -22,8 +20,8 @@ class ChannelsSpec extends WordSpecLike
     (probe, channels)
   }
 
-  "Channels actor" must handle{
-    "JOIN" which {
+  "Channels actor" when receive{
+    "JOIN" should {
       "reply to JOIN with topic and names" in {
         val (probe, channels) = setup()
         channels ! MessageParser.parse(":user JOIN #channel")
@@ -55,7 +53,7 @@ class ChannelsSpec extends WordSpecLike
       }
     }
     "PART" which {
-      "broadcasted to other users" in {
+      "broadcasted to other users" ignore {
         val (probe, channels) = setup()
         channels ! MessageParser.parse(":alice JOIN #channel4")
         channels ! MessageParser.parse(":bob JOIN #channel4")
@@ -76,6 +74,32 @@ class ChannelsSpec extends WordSpecLike
         )
       }
     }
+    "FbUserJoin and NewFbThread" should {
+      "Broadcast JOIN messages from new Fb user" in {
+        val (probe, channels) = setup()
+        channels ! NewFbThread(ChannelName("#test-channel"), ThreadId("1"))
+        channels ! MessageParser.parse(":alice JOIN #test-channel")
+        channels ! FbUserJoin(UserName("bob"), ThreadId("1"))
+
+        probe.expectIrcMessage("alice",
+          ":bob JOIN #test-channel"
+        )
+      }
+    }
+    "NewFbMessage" should {
+      "Broadcast PRIVMSG to other users" in {
+        val (probe, channels) = setup()
+        channels ! NewFbThread(ChannelName("#channel"), ThreadId("1"))
+        channels ! MessageParser.parse(":alice JOIN #channel")
+        channels ! FbUserJoin(UserName("bob"), ThreadId("1"))
+        channels ! NewFbMessage(UserName("bob"), ThreadId("1"), "hi")
+
+        probe.expectIrcMessage("alice",
+          ":bob PRIVMSG #channel :hi"
+        )
+      }
+    }
+
   }
 
 }
