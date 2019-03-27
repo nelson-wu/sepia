@@ -64,14 +64,10 @@ class FbMessenger(users: ActorRef,
   }
 
 
-  def removePartedUsers(parted: Map[ThreadId, Set[Participant]]): Unit = {}
 
   override def receive: Receive = {
     case FirstTick ⇒ timers.startPeriodicTimer(TickKey, Tick, 10 seconds)
-    case Tick ⇒ {
-      getState() pipeTo self
-
-    }
+    case Tick ⇒ getState() pipeTo self
 
     case receivedState: FbMessengerState ⇒ {
       val newThreads = FbMessengerState.deltaThreads(fbMessengerState.threads, receivedState.threads)
@@ -80,10 +76,10 @@ class FbMessenger(users: ActorRef,
 
       createNewThreads(newThreads)
       addNewUsers(newUsers)
-      removePartedUsers(newUsers.parted)
       broadcastNewMessages(newMessages)
 
       val newState = FbMessengerState.synchronize(fbMessengerState, receivedState)
+      fbMessengerState = newState
     }
 
 
