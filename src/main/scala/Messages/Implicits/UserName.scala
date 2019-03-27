@@ -19,6 +19,12 @@ object ImplicitConversions {
     )
   }
 
+  object UserName{
+    def apply(input: String): UserName = new UserName(
+      input.replaceAll("\\s+", "")
+    )
+  }
+
   private def sanitize(in: String): String = in.replaceAll(",| ", "")
   implicit def stringToUserName(str: String): UserName = UserName(str)
   implicit def stringToThreadId(str: String): ThreadId = ThreadId(str)

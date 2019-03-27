@@ -19,7 +19,7 @@ class FbMessengerSpec extends WordSpec
   implicit val system = ActorSystem("fb-messenger-spec")
 
   def setup(testClient: BaseFbClient, tag: String = "") = {
-    val probe = IrcTestProbe(tag)
+    val probe = IrcTestProbe(tag, 5 seconds)
     val fbMessenger = system.actorOf(Props(classOf[FbMessenger], probe.ref, probe.ref, testClient, true))
     (probe, fbMessenger)
   }

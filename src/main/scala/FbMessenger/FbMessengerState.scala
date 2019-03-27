@@ -41,9 +41,6 @@ object FbMessengerState {
   }
 
   def synchronizeUsersInThread(userChanges: DeltaUsers, t: FbThread): FbThread = {
-    if ((userChanges.joined.keys.toSeq contains t.threadId)
-      || (userChanges.parted.keys.toSeq contains t.threadId)) {
-
       val joinedUsersMaybe = userChanges.joined.get(t.threadId)
       val leftUsersMaybe = userChanges.parted.get(t.threadId)
 
@@ -51,8 +48,6 @@ object FbMessengerState {
       val withJoinedLeft = leftUsersMaybe.fold(withJoined)(withJoined -- _)
 
       t.copy(participants = withJoinedLeft)
-    }
-    else t
   }
 
   // threads are monotonically increasing
@@ -61,14 +56,14 @@ object FbMessengerState {
 
   def deltaUsers(current: Seq[FbThread], next: Seq[FbThread]): DeltaUsers = {
     next.foldLeft(DeltaUsers()){(delta, newThread) ⇒
-      val oldThread = current.find(_.threadId == newThread.threadId)
-      val joinedUsers = oldThread.map(thread ⇒
+      val oldThreadMaybe = current.find(_.threadId == newThread.threadId)
+      val joinedUsers = oldThreadMaybe.map(thread ⇒
         Map(thread.threadId → (newThread.participants diff thread.participants))
       ).getOrElse(
         Map(newThread.threadId → newThread.participants)
       )
 
-      val leftUsers = oldThread.map(thread ⇒
+      val leftUsers = oldThreadMaybe.map(thread ⇒
         Map(thread.threadId → (thread.participants diff newThread.participants))
       ).getOrElse(Map())
 
