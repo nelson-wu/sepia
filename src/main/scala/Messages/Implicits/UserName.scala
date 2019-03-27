@@ -6,11 +6,23 @@ package Messages.Implicits
 object ImplicitConversions {
   case class UserName(val value: String) extends AnyVal
   case class ThreadId(val value: String) extends AnyVal
-  case class ChannelName(input: String) {
-    val value = input.charAt(0) match {
-      case '&' | '#' | '+' | '!' ⇒ sanitize(input)
-      case _ ⇒ '#' + sanitize(input)
-    }
+  case class ChannelName(value: String)
+
+  object ChannelName{
+    def apply(input: String): ChannelName = new ChannelName(
+      input.charAt(0) match {
+        case '&' | '#' | '+' | '!' ⇒ sanitize(input)
+        case _ ⇒ '#' + input
+          .replaceAll("\\s+", "-")
+          .toLowerCase()
+      }
+    )
+  }
+
+  object UserName{
+    def apply(input: String): UserName = new UserName(
+      input.replaceAll("\\s+", "")
+    )
   }
 
   private def sanitize(in: String): String = in.replaceAll(",| ", "")

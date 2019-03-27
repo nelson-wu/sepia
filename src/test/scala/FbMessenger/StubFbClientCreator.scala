@@ -20,15 +20,17 @@ object StubFbClientCreator {
     def getCurrentId() = Future.successful(_getCurrentId)
 
     def getThreadList(limit: Option[Int]): Future[Seq[FbThread]] = {
-      val idx = Math.max(threadListCallCounter, threadList.length - 1)
-      threadListCallCounter = threadListCallCounter + 1
-      Future.successful(threadList(idx))
+      val thread = threadList(threadListCallCounter)
+      if (threadListCallCounter + 1 < threadList.length)
+        threadListCallCounter = threadListCallCounter + 1
+      Future.successful(thread)
     }
 
     def getThreadHistory(threadId: ThreadId, highWaterMark: Option[Instant], limit: Option[Int]): Future[Seq[FbMessage]] = {
-      val idx = Math.max(threadHistoryCallCounter, threadHistory.length - 1)
-      threadHistoryCallCounter = threadHistoryCallCounter + 1
-      Future.successful(threadHistory(idx))
+      val history = threadHistory(threadHistoryCallCounter)
+      if (threadHistoryCallCounter + 1 < threadHistory.length)
+        threadHistoryCallCounter = threadHistoryCallCounter + 1
+      Future.successful(history)
     }
   }
 

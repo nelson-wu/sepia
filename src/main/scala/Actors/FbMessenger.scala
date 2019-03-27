@@ -1,19 +1,16 @@
 package Actors
 
-import FbMessenger.{BaseFbClient, FbMessage, FbMessengerState, FbThread}
+import FbMessenger._
 import Messages.Implicits.ImplicitConversions.ThreadId
 import Messages._
 import akka.actor.{Actor, ActorLogging, ActorRef, Timers}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
+import akka.pattern.pipe
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
-import akka.util.ByteString
 import ircserver.Globals
-import play.api.libs.json.{JsArray, Json}
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.concurrent.{Await, Future}
 
 // Synchronization strategy:
 // Messenger-microservice has 3 endpoints:
@@ -29,7 +26,12 @@ import scala.util.{Failure, Success}
 //     - If the returned number is greater, for that thread, call thread-history and send unread
 //       messages as PRIVMSGs to Channels actor.
 
-class FbMessenger(users: ActorRef, channels: ActorRef, client: BaseFbClient, test: Boolean) extends Actor with ActorLogging with Timers {
+class FbMessenger(users: ActorRef,
+                  channels: ActorRef,
+                  client: BaseFbClient,
+                  test: Boolean
+                 ) extends Actor with ActorLogging with Timers {
+
   import Timing._
   import context.dispatcher
 
@@ -39,8 +41,10 @@ class FbMessenger(users: ActorRef, channels: ActorRef, client: BaseFbClient, tes
   val fbEndpoint = "http://" + Globals.fbServerName + ":" + Globals.fbPort
   val http = Http(context.system)
 
+  var fbMessengerState = FbMessengerState()
+
   val threads = collection.mutable.HashSet[FbThread]()
-  var messagesReceived = collection.mutable.Map[ThreadId, Int]( )
+  var messagesReceived = collection.mutable.Map[ThreadId, Int]()
 
 
   def getState(): Future[FbMessengerState] = {
@@ -50,46 +54,53 @@ class FbMessenger(users: ActorRef, channels: ActorRef, client: BaseFbClient, tes
         thread.map(t ⇒ (t.threadId, Await.result(client.getThreadHistory(t.threadId, None, Some(10)), 5 seconds)))
       }
     })
-    (threadList zip threadHistory).map{ case (list, hist) ⇒ FbMessengerState(
-      threads = list,
-      messages = hist.toMap
-    )}
+    val state = (threadList zip threadHistory).map { case (list, hist) ⇒
+      FbMessengerState(
+        threads = list,
+        messages = hist.toMap
+      )
+    }
+    state
   }
+
+
+
   override def receive: Receive = {
     case FirstTick ⇒ timers.startPeriodicTimer(TickKey, Tick, 10 seconds)
-    case Tick ⇒ {
-      val newState = getState()
+    case Tick ⇒ getState() pipeTo self
 
-//      threadList.onComplete{
-//        case Success(receivedThreads) ⇒
-//          val newThreads =
-//            addNewThreads(newThreads)
-//
-//          //          addNewUsers()
-//
-//          receivedThreads.foreach{
-//            case Some(thread) ⇒ {
-//              //            messagesReceived.update(thread.threadId, Math.max(messagesReceived(thread.threadId), thread.messageCount))
-//              //            receivedThreads.add(thread)
-//            }
-//            case None ⇒ println("None");
-//          }
-//        case Failure(f) ⇒ println(f)
-//      }
+    case receivedState: FbMessengerState ⇒ {
+      val newThreads = FbMessengerState.deltaThreads(fbMessengerState.threads, receivedState.threads)
+      val newUsers = FbMessengerState.deltaUsers(fbMessengerState.threads, receivedState.threads)
+      val newMessages = FbMessengerState.deltaMessages(fbMessengerState.messages, receivedState.messages)
 
+      createNewThreads(newThreads)
+      addNewUsers(newUsers)
+      broadcastNewMessages(newMessages)
+
+      val newState = FbMessengerState.synchronize(fbMessengerState, receivedState)
+      fbMessengerState = newState
     }
-    //    case HttpResponse(StatusCodes.OK, headers, entity, _) ⇒
-    //      entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { body =>
-    //        log.info("Got response, body: " + Json.parse(body.utf8String))
-    //      }
-    //    case resp @ HttpResponse(code, _, _, _) =>
-    //      log.info("Request failed, response code: " + code)
-    //      resp.discardEntityBytes()
-  }
 
-  def addNewThreads(newThreads: Set[FbThread]): Unit = {
-    newThreads.foreach(t ⇒ channels ! Message(NewFbThreadCommand(t.name, t.threadId), Prefix(""), NoParams, ""))
-    threads ++= newThreads
+
+      def createNewThreads(newThreads: Seq[FbThread]): Unit =
+        newThreads foreach { t ⇒
+          channels ! NewFbThread(t.name, t.threadId)
+        }
+
+      def addNewUsers(newUsers: DeltaUsers): Unit =
+        newUsers.joined foreach { case (threadId, users) =>
+          users foreach { user =>
+            channels ! FbUserJoin(user.name, threadId)
+          }
+        }
+
+      def broadcastNewMessages(newMessages: Map[ThreadId, Seq[FbMessage]]): Unit =
+        newMessages foreach { case (threadId, messages) ⇒
+          messages foreach { message =>
+            channels ! NewFbMessage(message.senderName, threadId, message.text)
+          }
+        }
   }
 }
 

@@ -1,7 +1,6 @@
 package FbMessenger
 
 import Messages.Implicits.ImplicitConversions._
-import org.joda.time.Instant
 
 
 /**
@@ -12,7 +11,10 @@ case class FbMessengerState(
                              messages: Map[ThreadId, Seq[FbMessage]] = Map.empty
                            )
 
-case class DeltaUsers(plus: Map[ThreadId, Set[Participant]] = Map.empty, minus: Map[ThreadId, Set[Participant]] = Map.empty)
+case class DeltaUsers(
+                       joined: Map[ThreadId, Set[Participant]] = Map.empty,
+                       parted: Map[ThreadId, Set[Participant]] = Map.empty
+                     )
 
 object FbMessengerState {
 
@@ -22,18 +24,13 @@ object FbMessengerState {
     val messageChanges = deltaMessages(current.messages, next.messages)
 
     val newThreads = (current.threads ++ threadChanges)
-      .map { t =>
-        if ((userChanges.plus.keys.toSeq contains t.threadId) || (userChanges.minus.keys.toSeq contains t.threadId)) {
-          val newUsers = t.participants ++ userChanges.plus(t.threadId) -- userChanges.minus(t.threadId)
-          t.copy(participants = newUsers)
-        }
-        else t
-      }
+      .map(t ⇒ synchronizeUsersInThread(userChanges, t))
 
     val newMessages = current.messages.map {
-      case (thread, messages) => if (messageChanges contains thread) {
-        thread -> (messages ++ messageChanges(thread))
-      } else thread -> messages
+      case (thread, messages) =>
+        if (messageChanges contains thread)
+          thread -> (messages ++ messageChanges(thread))
+        else thread -> messages
     }
 
     current.copy(
@@ -42,34 +39,54 @@ object FbMessengerState {
     )
   }
 
+  def synchronizeUsersInThread(userChanges: DeltaUsers, t: FbThread): FbThread = {
+      val joinedUsersMaybe = userChanges.joined.get(t.threadId)
+      val leftUsersMaybe = userChanges.parted.get(t.threadId)
+
+      val withJoined = joinedUsersMaybe.fold(t.participants)(t.participants ++ _)
+      val withJoinedLeft = leftUsersMaybe.fold(withJoined)(withJoined -- _)
+
+      t.copy(participants = withJoinedLeft)
+  }
+
   // threads are monotonically increasing
   def deltaThreads(current: Seq[FbThread], next: Seq[FbThread]): Seq[FbThread] =
-    next.filter(t ⇒ !current.exists(_.threadId == t.threadId))
+    next.filter(newThread ⇒ !current.exists(_.threadId == newThread.threadId))
 
   def deltaUsers(current: Seq[FbThread], next: Seq[FbThread]): DeltaUsers = {
     next.foldLeft(DeltaUsers()){(delta, newThread) ⇒
-      val oldThread = current.find(_.threadId == newThread.threadId)
-      val joinedUsers = oldThread.map(thread ⇒
+      val oldThreadMaybe = current.find(_.threadId == newThread.threadId)
+      val joinedUsers = oldThreadMaybe.map(thread ⇒
         Map(thread.threadId → (newThread.participants diff thread.participants))
-      )
-      val leftUsers = oldThread.map(thread ⇒
-        Map(thread.threadId → (thread.participants diff newThread.participants))
+      ).getOrElse(
+        Map(newThread.threadId → newThread.participants)
       )
 
+      val leftUsers = oldThreadMaybe.map(thread ⇒
+        Map(thread.threadId → (thread.participants diff newThread.participants))
+      ).getOrElse(Map())
+
       delta.copy(
-        plus = delta.plus ++ joinedUsers.getOrElse(Map.empty),
-        minus = delta.minus ++ leftUsers.getOrElse(Map.empty)
+        joined = delta.joined ++ joinedUsers,
+        parted = delta.parted ++ leftUsers
       )
     }
   }
 
   // messages are monotonically increasing
-  def deltaMessages(current: Map[ThreadId, Seq[FbMessage]], next: Map[ThreadId, Seq[FbMessage]]): Map[ThreadId, Seq[FbMessage]] = {
-    next.map{ case (id, newMessages) ⇒
-        val oldMessages = current(id)
-        val latestReadMessage = oldMessages.maxBy(_.timestamp.getMillis)
-        val newerMessages = next(id).filter(_.timestamp.getMillis > latestReadMessage.timestamp.getMillis)
-        id → newerMessages
+  def deltaMessages(oldThreads: Map[ThreadId, Seq[FbMessage]], newThreads: Map[ThreadId, Seq[FbMessage]]): Map[ThreadId, Seq[FbMessage]] = {
+    newThreads.map{ case (threadId, newMessages) ⇒
+        val oldMessagesMaybe = oldThreads.get(threadId)
+
+        val latestReadTimestamp = oldMessagesMaybe.map(_
+          .map(_.timestamp.getMillis).max
+        ).getOrElse(0L)
+
+        val newerMessagesMaybe = newThreads
+          .get(threadId)
+          .map(_.filter(_.timestamp.getMillis > latestReadTimestamp))
+
+        threadId → newerMessagesMaybe.getOrElse(Seq())
     }
   }
 }

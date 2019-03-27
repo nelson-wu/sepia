@@ -17,5 +17,4 @@ object FbThread {
         Participant.fromArray((in \ "participants").as[JsArray])
       )
     }.toOption
-
 }

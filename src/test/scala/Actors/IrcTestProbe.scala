@@ -1,15 +1,16 @@
 package Actors
 
 import Messages.{Message, MessageSerializer, Params}
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
+
 import scala.concurrent.duration._
-import akka.testkit.TestProbe
+import akka.testkit.{TestActor, TestProbe}
 import org.scalatest.{Matchers, WordSpec}
 
 /**
   * Created by Nelson on 2018/07/20.
   */
-class IrcTestProbe(system: ActorSystem) extends TestProbe(system)
+class IrcTestProbe(system: ActorSystem, timeout: Duration = 3 seconds) extends TestProbe(system)
   with Matchers {
   def expectIrcMessage(recipient: String, expectedMessages: String*) = {
     fishForMessage(100 millis){
@@ -26,6 +27,14 @@ class IrcTestProbe(system: ActorSystem) extends TestProbe(system)
     }
   }
 
+  def expectWithinDuration[T](msg: T) = {
+    fishForMessage(timeout) {
+      case received: T ⇒ received == msg
+      case x: Any ⇒
+        false
+    }
+  }
+
   // TODO: make this actually work
   def expectNoSuchIrcMessage(recipient: String, messages: String*) = expectMsgPF() {
     case msg: Message[Params] ⇒
@@ -35,4 +44,19 @@ class IrcTestProbe(system: ActorSystem) extends TestProbe(system)
       if (exactSameMessage) throw new Exception(s"Did not expect to receive $receivedMessage")
   }
 
+}
+
+object IrcTestProbe{
+  def apply(tag: String, timeout: Duration = 3 seconds)(implicit system: ActorSystem): IrcTestProbe = {
+    val probe = new IrcTestProbe(system, timeout)
+    probe.setAutoPilot(new TestActor.AutoPilot {
+      def run(sender: ActorRef, msg: Any) = {
+        val other = sender.path
+        val me = probe.ref.path
+        println(s"$tag $me received $msg from $other")
+        this
+      }
+    })
+    probe
+  }
 }

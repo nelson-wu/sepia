@@ -36,10 +36,6 @@ class Channels(writer: ActorRef) extends Actor with ActorLogging {
       channelInfo foreach(writer ! _)
     }
 
-    case Message(NewFbThreadCommand(threadName, threadId), _, _, _) if !channelIdMap.contains(threadId) ⇒ {
-      channelIdMap += (threadId → threadName)
-      if(!channels.contains(threadName)) channels += (threadName → new Channel())
-    }
 
     case Message(PrivmsgCommand, Prefix(user), Compound(list, message), _) ⇒ {
       val channel = list.head.underlying

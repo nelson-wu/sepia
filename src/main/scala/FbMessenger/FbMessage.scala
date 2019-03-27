@@ -5,7 +5,7 @@ import play.api.libs.json.JsArray
 
 import scala.util.Try
 
-case class FbMessage(text: String, senderId: String, timestamp: Instant)
+case class FbMessage(text: String, senderId: String, senderName: String, timestamp: Instant)
 
 object FbMessage {
   def fromArray(parsed: JsArray): Seq[FbMessage] = {
@@ -21,6 +21,7 @@ object FbMessage {
         FbMessage(
           text,
           (v \ "senderID").get.as[String],
+          (v \ "name").get.as[String],
           new Instant((v \ "timestamp").get.as[String].toLong)
         )
       }.toOption
