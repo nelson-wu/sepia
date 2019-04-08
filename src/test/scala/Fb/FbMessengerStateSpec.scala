@@ -1,4 +1,4 @@
-package FbMessenger
+package Fb
 
 import Messages.Implicits.ImplicitConversions.ThreadId
 import org.joda.time.Instant
@@ -47,18 +47,18 @@ class FbMessengerStateSpec extends WordSpec
         )
         val oldState = FbMessengerState(
           threads = Seq(FbThread("thread", "thread1", true, 1, participants)),
-          messages = Map(ThreadId("thread1") → Seq(FbMessage("hi", "userId1", "user1", new Instant(1))))
+          messages = Map(ThreadId("thread1") → Seq(FbMessage("hi", "userId1", new Instant(1))))
         )
         val newState = FbMessengerState(
           threads = oldState.threads,
           messages = Map(ThreadId("thread1") → Seq(
-            FbMessage("hello", "userId1", "user1", new Instant(2))
+            FbMessage("hello", "userId1", new Instant(2))
           ))
         )
 
         FbMessengerState
           .deltaMessages(oldState.messages, newState.messages)(ThreadId("thread1")) shouldEqual Seq(
-          FbMessage("hello", "userId1", "user1", new Instant(2))
+          FbMessage("hello", "userId1", new Instant(2))
         )
       }
       "return new members of threads" in {
@@ -137,20 +137,20 @@ class FbMessengerStateSpec extends WordSpec
         )
         val oldState = FbMessengerState(
           threads = Seq(FbThread("thread", "thread1", true, 1, participants)),
-          messages = Map(ThreadId("thread1") → Seq(FbMessage("hi", "userId1", "user1", new Instant(1))))
+          messages = Map(ThreadId("thread1") → Seq(FbMessage("hi", "userId1", new Instant(1))))
         )
         val newState = FbMessengerState(
           threads = oldState.threads,
           messages = Map(ThreadId("thread1") → Seq(
-            FbMessage("hello", "userId1", "user1", new Instant(2))
+            FbMessage("hello", "userId1", new Instant(2))
           ))
         )
 
         FbMessengerState
           .synchronize(oldState, newState)
           .messages(ThreadId("thread1")) shouldEqual Seq(
-          FbMessage("hi", "userId1", "user1", new Instant(1)),
-          FbMessage("hello", "userId1", "user1", new Instant(2))
+          FbMessage("hi", "userId1", new Instant(1)),
+          FbMessage("hello", "userId1", new Instant(2))
         )
       }
 

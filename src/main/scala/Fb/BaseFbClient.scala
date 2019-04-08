@@ -1,7 +1,6 @@
-package FbMessenger
+package Fb
 
 import Messages.Implicits.ImplicitConversions.ThreadId
-import org.joda.time.Instant
 
 import scala.concurrent.Future
 
@@ -11,5 +10,5 @@ import scala.concurrent.Future
 trait BaseFbClient {
   def getCurrentId(): Future[String]
   def getThreadList(limit: Option[Int]): Future[Seq[FbThread]]
-  def getThreadHistory(threadId: ThreadId, highWaterMark: Option[Instant], limit: Option[Int]): Future[Seq[FbMessage]]
+  def getThreadHistory(threadId: ThreadId, limit: Option[Int]): Future[Seq[FbMessage]]
 }

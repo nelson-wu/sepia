@@ -1,4 +1,4 @@
-package FbMessenger
+package Fb
 
 import Messages.Implicits.ImplicitConversions.ThreadId
 import play.api.libs.json.{JsArray, JsValue}

@@ -1,6 +1,6 @@
 package Actors
 
-import Messages.Implicits.ImplicitConversions.{ChannelName, ThreadId, UserName}
+import Messages.Implicits.ImplicitConversions.{ChannelName, ThreadId, UserId, UserName}
 import Messages._
 import akka.actor.{ActorSystem, Props}
 import ircserver.Globals
@@ -12,7 +12,7 @@ class ChannelsSpec extends WordSpecLike
 
   def receive = afterWord("receive")
   implicit val source = "testUser"
-  val system = ActorSystem("channels-spec")
+  val system = ActorSystem(this.getClass.getSimpleName)
 
   def setup() = {
     val probe = new IrcTestProbe(system)
@@ -79,7 +79,7 @@ class ChannelsSpec extends WordSpecLike
         val (probe, channels) = setup()
         channels ! NewFbThread(ChannelName("#test-channel"), ThreadId("1"))
         channels ! MessageParser.parse(":alice JOIN #test-channel")
-        channels ! FbUserJoin(UserName("bob"), ThreadId("1"))
+        channels ! FbUserJoin(UserName("bob"), UserId("bobId"), ThreadId("1"))
 
         probe.expectIrcMessage("alice",
           ":bob JOIN #test-channel"
@@ -91,8 +91,8 @@ class ChannelsSpec extends WordSpecLike
         val (probe, channels) = setup()
         channels ! NewFbThread(ChannelName("#channel"), ThreadId("1"))
         channels ! MessageParser.parse(":alice JOIN #channel")
-        channels ! FbUserJoin(UserName("bob"), ThreadId("1"))
-        channels ! NewFbMessage(UserName("bob"), ThreadId("1"), "hi")
+        channels ! FbUserJoin(UserName("bob"), UserId("bobId"), ThreadId("1"))
+        channels ! NewFbMessage(UserId("bobId"), ThreadId("1"), "hi")
 
         probe.expectIrcMessage("alice",
           ":bob PRIVMSG #channel :hi"

@@ -1,11 +1,12 @@
-package FbMessenger
+package Fb
 
+import Messages.Implicits.ImplicitConversions.UserId
 import org.joda.time.Instant
 import play.api.libs.json.JsArray
 
 import scala.util.Try
 
-case class FbMessage(text: String, senderId: String, senderName: String, timestamp: Instant)
+case class FbMessage(text: String, senderId: UserId, timestamp: Instant)
 
 object FbMessage {
   def fromArray(parsed: JsArray): Seq[FbMessage] = {
@@ -21,7 +22,6 @@ object FbMessage {
         FbMessage(
           text,
           (v \ "senderID").get.as[String],
-          (v \ "name").get.as[String],
           new Instant((v \ "timestamp").get.as[String].toLong)
         )
       }.toOption

@@ -1,5 +1,5 @@
 package Messages
-import Messages.Implicits.ImplicitConversions.{ChannelName, ThreadId, UserName}
+import Messages.Implicits.ImplicitConversions.{ChannelName, ThreadId, UserId, UserName}
 
 // From https://tools.ietf.org/html/rfc2812#page-5
 
@@ -26,8 +26,8 @@ case object PartCommand extends Command { val text = "PART" }
 trait InternalMessage extends BaseMessage
 case class NewFbUser(userId: String, userName: UserName) extends InternalMessage
 case class NewFbThread(threadName: ChannelName, threadId: ThreadId) extends InternalMessage
-case class FbUserJoin(userName: UserName, threadId: ThreadId) extends InternalMessage
-case class NewFbMessage(from: UserName, threadId: ThreadId, text: String) extends InternalMessage
+case class FbUserJoin(userName: UserName, userId: UserId, threadId: ThreadId) extends InternalMessage
+case class NewFbMessage(from: UserId, threadId: ThreadId, text: String) extends InternalMessage
 
 object Command {
   def apply(str: String): Command = str match {

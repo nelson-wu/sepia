@@ -1,6 +1,6 @@
 package Actors
 
-import FbMessenger._
+import Fb._
 import Messages.Implicits.ImplicitConversions.ThreadId
 import Messages._
 import akka.actor.{Actor, ActorLogging, ActorRef, Timers}
@@ -29,10 +29,10 @@ import scala.concurrent.{Await, Future}
 class FbMessenger(users: ActorRef,
                   channels: ActorRef,
                   client: BaseFbClient,
-                  test: Boolean
+                  test: Boolean = false
                  ) extends Actor with ActorLogging with Timers {
 
-  import Timing._
+  import Actors.DataTypes.Timing._
   import context.dispatcher
 
   if (!test) timers.startSingleTimer(TickKey, FirstTick, 500 millis)
@@ -44,14 +44,13 @@ class FbMessenger(users: ActorRef,
   var fbMessengerState = FbMessengerState()
 
   val threads = collection.mutable.HashSet[FbThread]()
-  var messagesReceived = collection.mutable.Map[ThreadId, Int]()
 
 
   def getState(): Future[FbMessengerState] = {
     val threadList = client.getThreadList(Some(200))
     val threadHistory = threadList.flatMap(thread ⇒ {
       Future {
-        thread.map(t ⇒ (t.threadId, Await.result(client.getThreadHistory(t.threadId, None, Some(10)), 5 seconds)))
+        thread.map(t ⇒ (t.threadId, Await.result(client.getThreadHistory(t.threadId, Some(10)), 5 seconds)))
       }
     })
     val state = (threadList zip threadHistory).map { case (list, hist) ⇒
@@ -70,6 +69,7 @@ class FbMessenger(users: ActorRef,
     case Tick ⇒ getState() pipeTo self
 
     case receivedState: FbMessengerState ⇒ {
+      println("Received messengerState: " + receivedState)
       val newThreads = FbMessengerState.deltaThreads(fbMessengerState.threads, receivedState.threads)
       val newUsers = FbMessengerState.deltaUsers(fbMessengerState.threads, receivedState.threads)
       val newMessages = FbMessengerState.deltaMessages(fbMessengerState.messages, receivedState.messages)
@@ -86,27 +86,21 @@ class FbMessenger(users: ActorRef,
       def createNewThreads(newThreads: Seq[FbThread]): Unit =
         newThreads foreach { t ⇒
           channels ! NewFbThread(t.name, t.threadId)
+          println(s"New thread: ${t.name}")
         }
 
       def addNewUsers(newUsers: DeltaUsers): Unit =
         newUsers.joined foreach { case (threadId, users) =>
           users foreach { user =>
-            channels ! FbUserJoin(user.name, threadId)
+            channels ! FbUserJoin(user.name, user.id, threadId)
           }
         }
 
       def broadcastNewMessages(newMessages: Map[ThreadId, Seq[FbMessage]]): Unit =
         newMessages foreach { case (threadId, messages) ⇒
           messages foreach { message =>
-            channels ! NewFbMessage(message.senderName, threadId, message.text)
+            channels ! NewFbMessage(message.senderId, threadId, message.text)
           }
         }
   }
 }
-
-object Timing {
-  case object Tick
-  case object FirstTick
-  case object TickKey
-}
-
