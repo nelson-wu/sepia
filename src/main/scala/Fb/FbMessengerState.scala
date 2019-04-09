@@ -1,4 +1,4 @@
-package FbMessenger
+package Fb
 
 import Messages.Implicits.ImplicitConversions._
 

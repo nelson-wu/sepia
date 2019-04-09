@@ -1,7 +1,8 @@
 package Actors
 
+import Actors.DataTypes.Connection
 import Messages._
-import akka.actor.{Actor, ActorRef}
+import akka.actor.Actor
 import akka.io.Tcp.Write
 import shapeless.TypeCase
 
@@ -46,5 +47,6 @@ class Writer extends Actor {
     case messageCompound(n) if connectionList.contains(n.recipient)⇒
       connectionList(n.recipient).ref ! Write(serialize(n))
       println(s"Sending: ${serialize(n).utf8String}")
+    case _ ⇒ ()
   }
 }

@@ -1,4 +1,5 @@
 package Actors
+import Actors.DataTypes.Connection
 import Messages._
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.io.Tcp

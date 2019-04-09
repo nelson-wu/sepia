@@ -2,7 +2,9 @@ package Actors
 
 import java.net.InetSocketAddress
 
-import akka.actor.{Actor, ActorRef, Props}
+import Actors.DataTypes.Connection
+import Fb.FbClient
+import akka.actor.{Actor, Props}
 import akka.io.{IO, Tcp}
 import ircserver.Globals
 
@@ -17,7 +19,8 @@ class Server extends Actor {
   val writerActor = context.actorOf(Props(classOf[Writer]))
   val usersActor = context.actorOf(Props(classOf[Users], writerActor))
   val channelsActor = context.actorOf(Props(classOf[Channels], writerActor))
-  val fbMessengerActor = context.actorOf(Props(classOf[FbMessenger], usersActor, channelsActor))
+  val fbClient = new FbClient(system)
+  val fbMessengerActor = context.actorOf(Props(classOf[FbMessenger], usersActor, channelsActor, fbClient, false))
 
   def receive = {
     case b @ Bound(localAddress) ⇒
@@ -35,4 +38,3 @@ class Server extends Actor {
 
 }
 
-class Connection(val ref: ActorRef) extends AnyVal

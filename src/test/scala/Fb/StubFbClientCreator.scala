@@ -1,6 +1,5 @@
-package FbMessenger
+package Fb
 import Messages.Implicits.ImplicitConversions.ThreadId
-import org.joda.time.Instant
 
 import scala.concurrent.Future
 
@@ -26,7 +25,7 @@ object StubFbClientCreator {
       Future.successful(thread)
     }
 
-    def getThreadHistory(threadId: ThreadId, highWaterMark: Option[Instant], limit: Option[Int]): Future[Seq[FbMessage]] = {
+    def getThreadHistory(threadId: ThreadId, limit: Option[Int]): Future[Seq[FbMessage]] = {
       val history = threadHistory(threadHistoryCallCounter)
       if (threadHistoryCallCounter + 1 < threadHistory.length)
         threadHistoryCallCounter = threadHistoryCallCounter + 1

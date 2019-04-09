@@ -6,7 +6,8 @@ package Messages.Implicits
 object ImplicitConversions {
   case class UserName(val value: String) extends AnyVal
   case class ThreadId(val value: String) extends AnyVal
-  case class ChannelName(value: String)
+  case class UserId(val value: String) extends AnyVal
+  case class ChannelName(value: String) extends AnyVal
 
   object ChannelName{
     def apply(input: String): ChannelName = new ChannelName(
@@ -28,5 +29,6 @@ object ImplicitConversions {
   private def sanitize(in: String): String = in.replaceAll(",| ", "")
   implicit def stringToUserName(str: String): UserName = UserName(str)
   implicit def stringToThreadId(str: String): ThreadId = ThreadId(str)
+  implicit def stringToUserId(str: String): UserId = UserId(str)
   implicit def stringToChannelName(str: String): ChannelName = ChannelName(str)
 }

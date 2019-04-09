@@ -1,7 +1,8 @@
 package Actors
 
-import FbMessenger._
-import Messages.Implicits.ImplicitConversions.{ThreadId, UserName}
+import Actors.DataTypes.Timing
+import Fb._
+import Messages.Implicits.ImplicitConversions.{ThreadId, UserId, UserName}
 import Messages._
 import akka.actor.{ActorSystem, Props}
 import org.joda.time.Instant
@@ -16,10 +17,10 @@ class FbMessengerSpec extends WordSpec
   with Matchers
   with BeforeAndAfterEach {
 
-  implicit val system = ActorSystem("fb-messenger-spec")
+  implicit val system = ActorSystem(this.getClass.getSimpleName)
 
   def setup(testClient: BaseFbClient, tag: String = "") = {
-    val probe = IrcTestProbe(tag, 5 seconds)
+    val probe = IrcTestProbe(tag, 20 seconds)
     val fbMessenger = system.actorOf(Props(classOf[FbMessenger], probe.ref, probe.ref, testClient, true))
     (probe, fbMessenger)
   }
@@ -30,12 +31,12 @@ class FbMessengerSpec extends WordSpec
          val client = StubFbClientCreator(
            threadList = Seq(
              Seq(
-               FbThread("thread1", "1", false, 0, Set(Participant("a", "a")))
+               FbThread("thread1", "thread1", false, 0, Set(Participant("a", "userA")))
              )
            ),
            threadHistory = Seq(
              Seq(),
-             Seq(FbMessage("hi", "1", "a", new Instant(1)))
+             Seq(FbMessage("hi", "userA", new Instant(1)))
            )
          )
 
@@ -43,7 +44,7 @@ class FbMessengerSpec extends WordSpec
         fbMessenger ! Timing.Tick
         fbMessenger ! Timing.Tick
         probe.expectWithinDuration(
-          NewFbMessage("a", "1", "hi")
+          NewFbMessage(UserId("userA"), ThreadId("thread1"), "hi")
         )
 
       }
@@ -79,7 +80,7 @@ class FbMessengerSpec extends WordSpec
         fbMessenger ! Timing.Tick
         fbMessenger ! Timing.Tick
         probe.expectWithinDuration(
-          FbUserJoin(UserName("bob"), "1")
+          FbUserJoin(UserName("bob"), UserId("user2"), "1")
         )
       }
       "send FbUserJoin messages for new users in old threads" in {
@@ -97,7 +98,7 @@ class FbMessengerSpec extends WordSpec
         fbMessenger ! Timing.Tick
         fbMessenger ! Timing.Tick
         probe.expectWithinDuration(
-          FbUserJoin("BobB", "1")
+          FbUserJoin("BobB", "user2", "1")
         )
       }
     }
